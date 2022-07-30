@@ -1,0 +1,7 @@
+project: vSMTP
+target: mime-parser
+
+cmds:
+  - cmd: /mime_parser
+  - cmd: /mime_parser_no_inst @@
+    libfuzzer: false

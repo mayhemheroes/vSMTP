@@ -1,0 +1,7 @@
+project: vSMTP
+target: receiver
+
+cmds:
+  - cmd: /receiver
+  - cmd: /receiver_no_inst @@
+    libfuzzer: false

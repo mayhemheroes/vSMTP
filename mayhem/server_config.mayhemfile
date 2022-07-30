@@ -1,0 +1,7 @@
+project: vSMTP
+target: server-config
+
+cmds:
+  - cmd: /server_config
+  - cmd: /server_config_no_inst @@
+    libfuzzer: false
