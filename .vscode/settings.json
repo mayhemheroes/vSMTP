@@ -1,8 +1,11 @@
 {
     "cSpell.words": [
+        "adkim",
+        "afrf",
         "alpn",
         "appender",
         "ascii",
+        "aspf",
         "auid",
         "authid",
         "authpass",
@@ -63,6 +66,7 @@
         "recv",
         "repr",
         "rhai",
+        "rlookup",
         "roadmap",
         "rsasl",
         "Rset",

@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 /*
  * vSMTP mail transfer agent
  * Copyright (C) 2022 viridIT SAS
@@ -14,22 +16,23 @@
  * this program. If not, see https://www.gnu.org/licenses/.
  *
 */
+use crate::api::{EngineResult, Server, SharedObject};
 use rhai::plugin::{
     mem, Dynamic, FnAccess, FnNamespace, ImmutableString, Module, NativeCallContext,
     PluginFunction, RhaiResult, TypeId,
 };
+use vsmtp_common::re::anyhow::Context;
+use vsmtp_common::re::lettre;
 
 const DATE_FORMAT: &[time::format_description::FormatItem<'_>] =
     time::macros::format_description!("[year]-[month]-[day]");
 const TIME_FORMAT: &[time::format_description::FormatItem<'_>] =
     time::macros::format_description!("[hour]:[minute]:[second]");
 
-///
-#[rhai::plugin::export_module]
-pub mod utils {
+pub use utils_rhai::*;
 
-    use crate::modules::{types::types::SharedObject, EngineResult};
-    use vsmtp_common::re::lettre;
+#[rhai::plugin::export_module]
+mod utils_rhai {
 
     // TODO: not yet functional, the relayer cannot connect to servers.
     /// send a mail from a template.
@@ -95,9 +98,26 @@ pub mod utils {
             })?
             .to_str()
             .map_or(
-                Err("the system's hostname is not UTF-8 valide".into()),
+                Err("the system's hostname is not UTF-8 valid".into()),
                 |host| Ok(host.to_string()),
             )
+    }
+
+    /// Get the root domain (the registrable part)
+    ///
+    /// # Examples
+    ///
+    /// `foo.bar.example.com` => `example.com`
+    #[rhai_fn(global, return_raw)]
+    pub fn get_root_domain(domain: &str) -> EngineResult<String> {
+        if let Ok(domain) = addr::parse_domain_name(domain) {
+            domain
+                .root()
+                .map(ToString::to_string)
+                .ok_or_else(|| format!("failed to get root domain from {domain}").into())
+        } else {
+            Err(format!("failed to parse as domain: `{domain}`").into())
+        }
     }
 
     /// get the current time.
@@ -117,9 +137,81 @@ pub mod utils {
         now.format(&DATE_FORMAT)
             .unwrap_or_else(|_| String::default())
     }
+
+    /// Perform a dns lookup using the root dns.
+    #[rhai_fn(global, name = "lookup", return_raw, pure)]
+    pub fn lookup_str(server: &mut Server, name: &str) -> EngineResult<rhai::Array> {
+        super::lookup(server, name)
+    }
+
+    /// Perform a dns lookup using the root dns.
+    #[allow(clippy::needless_pass_by_value)]
+    #[rhai_fn(global, name = "lookup", return_raw, pure)]
+    pub fn lookup_obj(server: &mut Server, name: SharedObject) -> EngineResult<rhai::Array> {
+        super::lookup(server, &name.to_string())
+    }
+
+    /// Perform a dns lookup using the root dns.
+    #[rhai_fn(global, name = "rlookup", return_raw, pure)]
+    pub fn rlookup_str(server: &mut Server, name: &str) -> EngineResult<rhai::Array> {
+        super::rlookup(server, name)
+    }
+
+    /// Perform a dns lookup using the root dns.
+    #[allow(clippy::needless_pass_by_value)]
+    #[rhai_fn(global, name = "rlookup", return_raw, pure)]
+    pub fn rlookup_obj(server: &mut Server, name: SharedObject) -> EngineResult<rhai::Array> {
+        super::rlookup(server, &name.to_string())
+    }
 }
 
 // TODO: use UsersCache to optimize user lookup.
 fn user_exist(name: &str) -> bool {
     vsmtp_config::re::users::get_user_by_name(name).is_some()
+}
+
+// NOTE: should lookup & rlookup return an error if no record was found ?
+
+/// Perform a dns lookup using the root dns.
+///
+/// # Errors
+/// * Root resolver was not found.
+/// * Lookup failed.
+pub fn lookup(server: &mut Server, host: &str) -> EngineResult<rhai::Array> {
+    let resolver = server
+        .resolvers
+        .get(&server.config.server.domain)
+        .ok_or_else::<Box<rhai::EvalAltResult>, _>(|| "root resolver not found".into())?;
+
+    Ok(vsmtp_common::re::tokio::task::block_in_place(move || {
+        vsmtp_common::re::tokio::runtime::Handle::current().block_on(resolver.lookup_ip(host))
+    })
+    .map_err::<Box<rhai::EvalAltResult>, _>(|err| err.to_string().into())?
+    .into_iter()
+    .map(|record| rhai::Dynamic::from(record.to_string()))
+    .collect::<rhai::Array>())
+}
+
+/// Perform a dns reverse lookup using the root dns.
+///
+/// # Errors
+/// * Failed to convert the `ip` parameter from a string into an IP.
+/// * Reverse lookup failed.
+pub fn rlookup(server: &mut Server, ip: &str) -> EngineResult<rhai::Array> {
+    let ip = vsl_conversion_ok!(
+        "ip address",
+        std::net::IpAddr::from_str(ip).context("fail to parse ip address in rlookup")
+    );
+    let resolver = server
+        .resolvers
+        .get(&server.config.server.domain)
+        .ok_or_else::<Box<rhai::EvalAltResult>, _>(|| "root resolver not found".into())?;
+
+    Ok(vsmtp_common::re::tokio::task::block_in_place(move || {
+        vsmtp_common::re::tokio::runtime::Handle::current().block_on(resolver.reverse_lookup(ip))
+    })
+    .map_err::<Box<rhai::EvalAltResult>, _>(|err| err.to_string().into())?
+    .into_iter()
+    .map(|record| rhai::Dynamic::from(record.to_string()))
+    .collect::<rhai::Array>())
 }

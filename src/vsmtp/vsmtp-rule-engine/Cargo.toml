@@ -45,6 +45,8 @@ iprange = "0.6.7"
 ipnet = "2.5.0"
 csv = "1.1"
 
+addr = { version = "0.15.4" }
+
 rhai = { version = "1.8.0", features = [
   "unchecked",
   "sync",
@@ -58,7 +60,7 @@ wait-timeout = "0.2.0"
 
 viaspf = { version = "0.4.1", features = ["trust-dns-resolver"] }
 hostname = "0.3.1"
-time = { version = "0.3.11", default-features = false, features = [
+time = { version = "0.3.12", default-features = false, features = [
   "std",
   "formatting",
   "macros",

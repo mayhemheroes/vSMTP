@@ -15,7 +15,7 @@
  *
 */
 
-use super::{PublicKey, Signature, SigningAlgorithm};
+use super::{HashAlgorithm, PublicKey, Signature, SigningAlgorithm};
 use vsmtp_common::RawBody;
 
 /// Possible error produced by [`Signature::verify`]
@@ -23,13 +23,18 @@ use vsmtp_common::RawBody;
 pub enum VerifierError {
     /// The algorithm used in the signature is not supported by the public key
     #[error(
-        "the `signing_algorithm` ({singing_algorithm}) is not suitable for the `acceptable_hash_algorithms` ({acceptable})"
+        "the `signing_algorithm` ({singing_algorithm}) is not suitable for the `acceptable_hash_algorithms` ({})",
+        acceptable
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join(",")
     )]
     AlgorithmMismatch {
         /// The algorithm of the `DKIM-Signature` header
         singing_algorithm: SigningAlgorithm,
         /// The algorithms of the public key
-        acceptable: String,
+        acceptable: Vec<HashAlgorithm>,
     },
     /// The key is empty
     #[error("the key has been revoked, or is empty")]
@@ -47,8 +52,11 @@ pub enum VerifierError {
         error: rsa::errors::Error,
     },
     /// Not a valid base64 format in the `DKIM-Signature` header
-    #[error("base64 error")]
-    Base64Error,
+    #[error("base64 error: {error}")]
+    Base64Error {
+        /// Error produced by `base64::`
+        error: base64::DecodeError,
+    },
 }
 
 impl Signature {
@@ -64,12 +72,7 @@ impl Signature {
         {
             return Err(VerifierError::AlgorithmMismatch {
                 singing_algorithm: self.signing_algorithm,
-                acceptable: key
-                    .acceptable_hash_algorithms
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect::<Vec<_>>()
-                    .join(","),
+                acceptable: key.acceptable_hash_algorithms.clone(),
             });
         }
 
@@ -124,7 +127,8 @@ impl Signature {
                 }),
             },
             &headers_hash,
-            &base64::decode(&self.signature).map_err(|_| VerifierError::Base64Error)?,
+            &base64::decode(&self.signature)
+                .map_err(|e| VerifierError::Base64Error { error: e })?,
         )
         .map_err(|e| VerifierError::HeaderHashMismatch { error: e })
     }

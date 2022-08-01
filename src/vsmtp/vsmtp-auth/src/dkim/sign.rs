@@ -15,10 +15,7 @@
  *
 */
 
-use crate::dkim::{
-    signature::QueryMethod, Canonicalization, CanonicalizationAlgorithm, Signature,
-    SigningAlgorithm,
-};
+use super::{signature::QueryMethod, Canonicalization, Signature, SigningAlgorithm};
 use vsmtp_common::RawBody;
 
 impl Signature {
@@ -29,16 +26,14 @@ impl Signature {
         sdid: &str,
         headers_field: Vec<String>,
         private_key: &rsa::RsaPrivateKey,
+        canonicalization: Canonicalization,
     ) -> Result<Self, rsa::errors::Error> {
         let mut signature = Signature {
             version: 1,
             signing_algorithm: SigningAlgorithm::RsaSha256,
             sdid: String::default(),
             selector: String::default(),
-            canonicalization: Canonicalization {
-                header: CanonicalizationAlgorithm::Relaxed,
-                body: CanonicalizationAlgorithm::Relaxed,
-            },
+            canonicalization,
             query_method: vec![QueryMethod::default()],
             auid: String::default(),
             signature_timestamp: None,
@@ -113,12 +108,10 @@ impl std::fmt::Display for Signature {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::dkim::{
         public_key::{Type, Version},
-        HashAlgorithm, PublicKey,
+        Canonicalization, CanonicalizationAlgorithm, HashAlgorithm, PublicKey, Signature,
     };
-    use rsa::pkcs8::EncodePublicKey;
     use vsmtp_common::MessageBody;
 
     #[test]
@@ -147,8 +140,13 @@ mod tests {
                 "To".to_string(),
                 "Subject".to_string(),
                 "Date".to_string(),
+                "From".to_string(),
             ],
             &private_key,
+            Canonicalization {
+                header: CanonicalizationAlgorithm::Relaxed,
+                body: CanonicalizationAlgorithm::Relaxed,
+            },
         )
         .unwrap();
 
@@ -159,7 +157,10 @@ mod tests {
             acceptable_hash_algorithms: vec![HashAlgorithm::Sha256],
             r#type: Type::Rsa,
             notes: None,
-            public_key: public_key.to_public_key_der().unwrap().as_ref().to_vec(),
+            public_key: rsa::pkcs8::EncodePublicKey::to_public_key_der(&public_key)
+                .unwrap()
+                .as_ref()
+                .to_vec(),
             service_type: vec![],
             flags: vec![],
         };

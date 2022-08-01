@@ -67,6 +67,7 @@ enum ReportFailure {
 
 /// DNS record `_dmarc.{domain}`
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct Record {
     version: Version,
     adkim: AlignmentMode,
