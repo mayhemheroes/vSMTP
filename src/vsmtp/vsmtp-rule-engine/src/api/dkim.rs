@@ -41,8 +41,7 @@ impl std::fmt::Display for DnsError {
     }
 }
 
-#[derive(Debug, strum::AsRefStr, strum::EnumString, strum::EnumMessage, thiserror::Error)]
-#[strum(serialize_all = "snake_case")]
+#[derive(Debug, strum::EnumString, strum::EnumMessage, thiserror::Error)]
 enum DkimErrors {
     #[strum(message = "neutral")]
     #[error("the parsing of the signature failed: `{inner}`")]
@@ -100,7 +99,11 @@ mod dkim_rhai {
     #[rhai_fn(global, return_raw)]
     pub fn parse_signature(input: &str) -> EngineResult<Signature> {
         <Signature as std::str::FromStr>::from_str(input).map_err::<Box<rhai::EvalAltResult>, _>(
-            |inner| DkimErrors::SignatureParsingFailed { inner }.into(),
+            |inner| {
+                DkimErrors::SignatureParsingFailed { inner }
+                    .to_string()
+                    .into()
+            },
         )
     }
 
@@ -134,6 +137,7 @@ mod dkim_rhai {
                     "expected values in `[first, cycle]` but got `{on_multiple_key_records}`",
                 ),
             }
+            .to_string()
             .into());
         }
 
@@ -152,10 +156,12 @@ mod dkim_rhai {
                     | ResolveErrorKind::NoConnections
                     | ResolveErrorKind::NoRecordsFound { .. }
             ) {
-                DkimErrors::PermDnsError { inner: DnsError(e) }.into()
+                DkimErrors::PermDnsError { inner: DnsError(e) }
             } else {
-                DkimErrors::TempDnsError { inner: DnsError(e) }.into()
+                DkimErrors::TempDnsError { inner: DnsError(e) }
             }
+            .to_string()
+            .into()
         })?;
 
         let keys = txt_record
@@ -166,12 +172,12 @@ mod dkim_rhai {
             keys.take(1)
                 .collect::<Result<Vec<_>, <PublicKey as std::str::FromStr>::Err>>()
                 .map_err::<Box<EvalAltResult>, _>(|inner| {
-                    DkimErrors::KeyParsingFailed { inner }.into()
+                    DkimErrors::KeyParsingFailed { inner }.to_string().into()
                 })?
         } else {
             keys.collect::<Result<Vec<_>, <PublicKey as std::str::FromStr>::Err>>()
                 .map_err::<Box<EvalAltResult>, _>(|inner| {
-                    DkimErrors::KeyParsingFailed { inner }.into()
+                    DkimErrors::KeyParsingFailed { inner }.to_string().into()
                 })?
         }
         .into())
@@ -197,7 +203,7 @@ mod dkim_rhai {
         signature
             .verify(guard.inner(), &key)
             .map_err::<Box<EvalAltResult>, _>(|inner| {
-                DkimErrors::SignatureMismatch { inner }.into()
+                DkimErrors::SignatureMismatch { inner }.to_string().into()
             })
     }
 
