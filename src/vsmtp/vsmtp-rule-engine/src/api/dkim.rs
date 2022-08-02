@@ -164,7 +164,6 @@ mod dkim_rhai {
         })
         .map_err::<Box<rhai::EvalAltResult>, _>(|e| {
             use trust_dns_resolver::error::ResolveErrorKind;
-            log::warn!("failed to get public key: `{e}`");
             if matches!(
                 e.kind(),
                 ResolveErrorKind::Message(_)
