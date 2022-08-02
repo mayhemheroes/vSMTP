@@ -21,24 +21,51 @@ use rhai::plugin::{
     PluginFunction, RhaiResult, TypeId,
 };
 use rhai::EvalAltResult;
-use vsmtp_auth::dkim::{PublicKey, Signature};
+use vsmtp_auth::dkim::{PublicKey, Signature, VerifierError};
 use vsmtp_common::re::tokio;
 
-#[derive(Debug, strum::AsRefStr, strum::EnumString, strum::EnumMessage)]
+#[derive(Debug)]
+struct DnsError(trust_dns_resolver::error::ResolveError);
+
+impl Default for DnsError {
+    fn default() -> Self {
+        Self(trust_dns_resolver::error::ResolveError::from(
+            trust_dns_resolver::error::ResolveErrorKind::Message("`default` invoked"),
+        ))
+    }
+}
+
+impl std::fmt::Display for DnsError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[derive(Debug, strum::AsRefStr, strum::EnumString, strum::EnumMessage, thiserror::Error)]
 #[strum(serialize_all = "snake_case")]
 enum DkimErrors {
     #[strum(message = "neutral")]
-    SignatureParsingFailed, // { inner: <Signature as std::str::FromStr>::Err, }
+    #[error("the parsing of the signature failed: `{inner}`")]
+    SignatureParsingFailed {
+        inner: <Signature as std::str::FromStr>::Err,
+    },
     #[strum(message = "neutral")]
-    KeyParsingFailed, // { inner: <Key as std::str::FromStr>::Err, }
+    #[error("the parsing of the public key failed: `{inner}`")]
+    KeyParsingFailed {
+        inner: <PublicKey as std::str::FromStr>::Err,
+    },
     #[strum(message = "neutral")]
-    PolicySyntaxError, // { inner: String, }
+    #[error("invalid argument: `{inner}`")]
+    PolicySyntaxError { inner: String },
     #[strum(message = "temperror")]
-    TempDnsError, // { inner: trust_dns_resolver::error::ResolveError, }
+    #[error("temporary dns error: `{inner}`")]
+    TempDnsError { inner: DnsError },
     #[strum(message = "permerror")]
-    PermDnsError, // { inner: trust_dns_resolver::error::ResolveError, }
+    #[error("permanent dns error: `{inner}`")]
+    PermDnsError { inner: DnsError },
     #[strum(message = "fail")]
-    SignatureMismatch,
+    #[error("the signature does not match: `{inner}`")]
+    SignatureMismatch { inner: VerifierError },
 }
 
 #[rhai::plugin::export_module]
@@ -72,8 +99,9 @@ mod dkim_rhai {
     /// create a [`Signature`] from a `DKIM-Signature` header
     #[rhai_fn(global, return_raw)]
     pub fn parse_signature(input: &str) -> EngineResult<Signature> {
-        <Signature as std::str::FromStr>::from_str(input)
-            .map_err::<Box<rhai::EvalAltResult>, _>(|_| DkimErrors::SignatureParsingFailed.into())
+        <Signature as std::str::FromStr>::from_str(input).map_err::<Box<rhai::EvalAltResult>, _>(
+            |inner| DkimErrors::SignatureParsingFailed { inner }.into(),
+        )
     }
 
     /// Has the signature expired?
@@ -101,12 +129,12 @@ mod dkim_rhai {
     ) -> EngineResult<rhai::Dynamic> {
         const VALID_POLICY: [&str; 2] = ["first", "cycle"];
         if !VALID_POLICY.contains(&on_multiple_key_records) {
-            return Err(DkimErrors::PolicySyntaxError.into());
-            /*{
+            return Err(DkimErrors::PolicySyntaxError {
                 inner: format!(
                     "expected values in `[first, cycle]` but got `{on_multiple_key_records}`",
                 ),
-            }*/
+            }
+            .into());
         }
 
         let resolver = server.resolvers.get(&server.config.server.domain).unwrap();
@@ -124,9 +152,9 @@ mod dkim_rhai {
                     | ResolveErrorKind::NoConnections
                     | ResolveErrorKind::NoRecordsFound { .. }
             ) {
-                DkimErrors::PermDnsError.into()
+                DkimErrors::PermDnsError { inner: DnsError(e) }.into()
             } else {
-                DkimErrors::TempDnsError.into()
+                DkimErrors::TempDnsError { inner: DnsError(e) }.into()
             }
         })?;
 
@@ -137,10 +165,14 @@ mod dkim_rhai {
         Ok(if on_multiple_key_records == "first" {
             keys.take(1)
                 .collect::<Result<Vec<_>, <PublicKey as std::str::FromStr>::Err>>()
-                .map_err::<Box<EvalAltResult>, _>(|_| DkimErrors::KeyParsingFailed.into())?
+                .map_err::<Box<EvalAltResult>, _>(|inner| {
+                    DkimErrors::KeyParsingFailed { inner }.into()
+                })?
         } else {
             keys.collect::<Result<Vec<_>, <PublicKey as std::str::FromStr>::Err>>()
-                .map_err::<Box<EvalAltResult>, _>(|_| DkimErrors::KeyParsingFailed.into())?
+                .map_err::<Box<EvalAltResult>, _>(|inner| {
+                    DkimErrors::KeyParsingFailed { inner }.into()
+                })?
         }
         .into())
     }
@@ -153,7 +185,7 @@ mod dkim_rhai {
 
     /// Operate the hashing of the `message`'s headers and body, and compare the result with the
     /// `signature` and `key` data.
-    #[allow(clippy::module_name_repetitions, clippy::needless_pass_by_value)]
+    #[allow(clippy::needless_pass_by_value)]
     #[rhai_fn(global, pure, return_raw)]
     pub fn verify_dkim(
         message: &mut Message,
@@ -164,12 +196,14 @@ mod dkim_rhai {
 
         signature
             .verify(guard.inner(), &key)
-            .map_err::<Box<EvalAltResult>, _>(|_| DkimErrors::SignatureMismatch.into())
+            .map_err::<Box<EvalAltResult>, _>(|inner| {
+                DkimErrors::SignatureMismatch { inner }.into()
+            })
     }
 
     ///
     #[rhai_fn(global, pure, return_raw)]
-    #[allow(clippy::module_name_repetitions, clippy::needless_pass_by_value)]
+    #[allow(clippy::needless_pass_by_value)]
     pub fn sign_dkim(
         message: &mut Message,
         context: Context,

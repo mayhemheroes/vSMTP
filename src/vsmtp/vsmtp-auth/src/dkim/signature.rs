@@ -28,6 +28,14 @@ pub enum ParseError {
     InvalidArgument { reason: String },
 }
 
+impl Default for ParseError {
+    fn default() -> Self {
+        ParseError::InvalidArgument {
+            reason: "`default` invoked".to_string(),
+        }
+    }
+}
+
 // NOTE: currently "dns/txt" is the only format supported (by signers and verifiers)
 // but others might be added in the future
 #[derive(Debug, Default, PartialEq, Eq, Clone)]

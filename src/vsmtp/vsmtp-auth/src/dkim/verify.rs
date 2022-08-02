@@ -59,6 +59,12 @@ pub enum VerifierError {
     },
 }
 
+impl Default for VerifierError {
+    fn default() -> Self {
+        VerifierError::KeyMissingOrRevoked
+    }
+}
+
 impl Signature {
     /// Verify a signature
     ///

@@ -80,6 +80,11 @@ async fn mail_3() {
     verify(&include_str!("mail_3.eml").replace('\n', "\r\n")).await;
 }
 
+#[tokio::test]
+async fn mail_4() {
+    verify(&include_str!("mail_4.eml").replace('\n', "\r\n")).await;
+}
+
 #[test]
 #[ignore = "need `sudo apt install python3-dkim`"]
 fn mail_1_3rd_party() {
