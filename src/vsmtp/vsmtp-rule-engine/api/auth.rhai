@@ -297,14 +297,14 @@ private fn sys_verify_dkim(policy) {
                     // header.b & header.a can be set optionally
                     return `dkim=pass header.d=${signature.sdid} header.i=${signature.auid};`;
                 } catch (e) {
-                    log("warn", `DKIM signature verifification failed: {}`, e.to_debug());
+                    log("warn", `DKIM signature verifification failed: ${e.to_debug()}`);
                     let e = sys::handle_dkim_error(e);
                     last_error = `dkim=${e}`;
                 }
             }
 
         } catch (e) {
-            log("warn", `DKIM signature invalid: {}`, e.to_debug());
+            log("warn", `DKIM signature invalid: ${e.to_debug()}`);
             let e = sys::handle_dkim_error(e);
             last_error = `dkim=${e}`;
         }
