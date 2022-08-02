@@ -2773,6 +2773,7 @@ dependencies = [
  "strum",
  "thiserror",
  "time",
+ "tracing",
  "trust-dns-resolver",
  "viaspf",
  "vsmtp-auth",

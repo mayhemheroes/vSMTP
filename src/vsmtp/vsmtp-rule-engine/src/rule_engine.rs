@@ -267,29 +267,22 @@ impl RuleEngine {
         Status::Next
     }
 
+    #[allow(clippy::similar_names)]
     fn execute_directives(
         &self,
         state: &mut RuleState,
         directives: &[Directive],
-        smtp_state: &StateSMTP,
+        stage: &StateSMTP,
     ) -> EngineResult<Status> {
         let mut status = Status::Next;
 
         for directive in directives {
-            status = directive.execute(state, &self.ast, smtp_state)?;
-
-            log::debug!(
-                "[{smtp_state}] {} '{}' evaluated => {status:?}.",
-                directive.directive_type(),
-                directive.name(),
-            );
+            status = directive.execute(state, &self.ast, stage)?;
 
             if status != Status::Next {
                 break;
             }
         }
-
-        log::debug!("[{smtp_state}] stage evaluated => {status:?}.");
 
         Ok(status)
     }

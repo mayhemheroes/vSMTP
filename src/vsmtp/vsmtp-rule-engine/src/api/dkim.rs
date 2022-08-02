@@ -20,11 +20,10 @@ use rhai::plugin::{
     mem, Dynamic, FnAccess, FnNamespace, ImmutableString, Module, NativeCallContext,
     PluginFunction, RhaiResult, TypeId,
 };
-use rhai::EvalAltResult;
 use vsmtp_auth::dkim::{
     Canonicalization, CanonicalizationAlgorithm, PublicKey, Signature, VerifierError,
 };
-use vsmtp_common::re::tokio;
+use vsmtp_common::re::{log, tokio};
 
 #[derive(Debug)]
 struct DnsError(trust_dns_resolver::error::ResolveError);
@@ -43,30 +42,41 @@ impl std::fmt::Display for DnsError {
     }
 }
 
-#[derive(Debug, strum::AsRefStr, strum::EnumString, strum::EnumMessage, thiserror::Error)]
+#[derive(Debug, strum::EnumString, strum::EnumMessage, thiserror::Error)]
 enum DkimErrors {
-    #[strum(message = "neutral")]
+    #[strum(message = "neutral", detailed_message = "signature_parsing_failed")]
     #[error("the parsing of the signature failed: `{inner}`")]
     SignatureParsingFailed {
         inner: <Signature as std::str::FromStr>::Err,
     },
-    #[strum(message = "neutral")]
+    #[strum(message = "neutral", detailed_message = "key_parsing_failed")]
     #[error("the parsing of the public key failed: `{inner}`")]
     KeyParsingFailed {
         inner: <PublicKey as std::str::FromStr>::Err,
     },
-    #[strum(message = "neutral")]
+    #[strum(message = "neutral", detailed_message = "invalid_argument")]
     #[error("invalid argument: `{inner}`")]
-    PolicySyntaxError { inner: String },
-    #[strum(message = "temperror")]
+    InvalidArgument { inner: String },
+    #[strum(message = "temperror", detailed_message = "temp_dns_error")]
     #[error("temporary dns error: `{inner}`")]
     TempDnsError { inner: DnsError },
-    #[strum(message = "permerror")]
+    #[strum(message = "permerror", detailed_message = "perm_dns_error")]
     #[error("permanent dns error: `{inner}`")]
     PermDnsError { inner: DnsError },
-    #[strum(message = "fail")]
+    #[strum(message = "fail", detailed_message = "signature_mismatch")]
     #[error("the signature does not match: `{inner}`")]
     SignatureMismatch { inner: VerifierError },
+}
+
+impl From<DkimErrors> for Box<rhai::EvalAltResult> {
+    fn from(this: DkimErrors) -> Self {
+        Box::new(rhai::EvalAltResult::ErrorSystem(
+            strum::EnumMessage::get_detailed_message(&this)
+                .expect("`DkimErrors` must have a `detailed message` for each variant")
+                .to_string(),
+            Box::new(this),
+        ))
+    }
 }
 
 #[rhai::plugin::export_module]
@@ -74,14 +84,20 @@ mod dkim_rhai {
 
     /// get the dkim status from an error produced by this module
     #[rhai_fn(global, return_raw)]
-    pub fn handle_dkim_error(err: &str) -> EngineResult<String> {
-        let r#type = DkimErrors::try_from(err).map_err::<Box<rhai::EvalAltResult>, _>(|e| {
-            format!("not the right type: `{e}`").into()
-        })?;
+    pub fn handle_dkim_error(err: rhai::Dynamic) -> EngineResult<String> {
+        println!("{err:?}");
 
-        Ok(strum::EnumMessage::get_message(&r#type)
-            .expect("`DkimErrors` must have a message for each variant")
-            .to_string())
+        todo!()
+
+        // let err = err.cast::<Box<rhai::EvalAltResult>>();
+        //
+        // let r#type = DkimErrors::try_from(err).map_err::<Box<rhai::EvalAltResult>, _>(|e| {
+        //     format!("not the right type: `{e}`").into()
+        // })?;
+        //
+        // Ok(strum::EnumMessage::get_message(&r#type)
+        //     .expect("`DkimErrors` must have a `message` for each variant")
+        //     .to_string())
     }
 
     /// return the `sdid` property of the [`Signature`]
@@ -100,7 +116,10 @@ mod dkim_rhai {
     #[rhai_fn(global, return_raw)]
     pub fn parse_signature(input: &str) -> EngineResult<Signature> {
         <Signature as std::str::FromStr>::from_str(input).map_err::<Box<rhai::EvalAltResult>, _>(
-            |inner| DkimErrors::SignatureParsingFailed { inner }.into(),
+            |inner| {
+                log::warn!("failed to parse DKIM-Signature: `{inner}`");
+                DkimErrors::SignatureParsingFailed { inner }.into()
+            },
         )
     }
 
@@ -129,7 +148,7 @@ mod dkim_rhai {
     ) -> EngineResult<rhai::Dynamic> {
         const VALID_POLICY: [&str; 2] = ["first", "cycle"];
         if !VALID_POLICY.contains(&on_multiple_key_records) {
-            return Err(DkimErrors::PolicySyntaxError {
+            return Err(DkimErrors::InvalidArgument {
                 inner: format!(
                     "expected values in `[first, cycle]` but got `{on_multiple_key_records}`",
                 ),
@@ -143,8 +162,9 @@ mod dkim_rhai {
             tokio::runtime::Handle::current()
                 .block_on(resolver.txt_lookup(signature.get_dns_query()))
         })
-        .map_err::<Box<EvalAltResult>, _>(|e| {
+        .map_err::<Box<rhai::EvalAltResult>, _>(|e| {
             use trust_dns_resolver::error::ResolveErrorKind;
+            log::warn!("failed to get public key: `{e}`");
             if matches!(
                 e.kind(),
                 ResolveErrorKind::Message(_)
@@ -163,17 +183,19 @@ mod dkim_rhai {
             .into_iter()
             .map(|i| <PublicKey as std::str::FromStr>::from_str(&i.to_string()));
 
+        let keys = keys
+            .collect::<Result<Vec<_>, <PublicKey as std::str::FromStr>::Err>>()
+            .map_err::<Box<rhai::EvalAltResult>, _>(|inner| {
+                DkimErrors::KeyParsingFailed { inner }.into()
+            })?;
+
         Ok(if on_multiple_key_records == "first" {
-            keys.take(1)
-                .collect::<Result<Vec<_>, <PublicKey as std::str::FromStr>::Err>>()
-                .map_err::<Box<EvalAltResult>, _>(|inner| {
-                    DkimErrors::KeyParsingFailed { inner }.into()
-                })?
+            match keys.into_iter().next() {
+                Some(i) => vec![i],
+                None => vec![],
+            }
         } else {
-            keys.collect::<Result<Vec<_>, <PublicKey as std::str::FromStr>::Err>>()
-                .map_err::<Box<EvalAltResult>, _>(|inner| {
-                    DkimErrors::KeyParsingFailed { inner }.into()
-                })?
+            keys
         }
         .into())
     }
@@ -195,9 +217,12 @@ mod dkim_rhai {
     ) -> EngineResult<()> {
         let guard = vsl_guard_ok!(message.read());
 
+        log::debug!("key={key:?}");
+        log::debug!("signature={signature:?}");
+
         signature
             .verify(guard.inner(), &key)
-            .map_err::<Box<EvalAltResult>, _>(|inner| {
+            .map_err::<Box<rhai::EvalAltResult>, _>(|inner| {
                 DkimErrors::SignatureMismatch { inner }.into()
             })
     }
@@ -215,18 +240,20 @@ mod dkim_rhai {
     ) -> EngineResult<()> {
         let (header, body) = canonicalization
             .split_once('/')
-            .ok_or_else::<Box<EvalAltResult>, _>(|| {
+            .ok_or_else::<Box<rhai::EvalAltResult>, _>(|| {
                 "invalid canonicalization: expected `header/body`".into()
             })?;
         let (header, body) = (
-            <CanonicalizationAlgorithm as std::str::FromStr>::from_str(header)
-                .map_err::<Box<EvalAltResult>, _>(|e| {
-                    format!("got error for canonicalization of headers: `{e}`").into()
-                })?,
-            <CanonicalizationAlgorithm as std::str::FromStr>::from_str(body)
-                .map_err::<Box<EvalAltResult>, _>(|e| {
-                    format!("got error for canonicalization of body: `{e}`").into()
-                })?,
+            <CanonicalizationAlgorithm as std::str::FromStr>::from_str(header).map_err::<Box<
+                rhai::EvalAltResult,
+            >, _>(
+                |e| format!("got error for canonicalization of headers: `{e}`").into(),
+            )?,
+            <CanonicalizationAlgorithm as std::str::FromStr>::from_str(body).map_err::<Box<
+                rhai::EvalAltResult,
+            >, _>(
+                |e| format!("got error for canonicalization of body: `{e}`").into(),
+            )?,
         );
 
         let mut msg_guard = vsl_guard_ok!(message.write());
@@ -251,7 +278,7 @@ mod dkim_rhai {
                     &dkim_params.private_key.inner,
                     Canonicalization { header, body },
                 )
-                .map_err::<Box<EvalAltResult>, _>(|e| e.to_string().into())?;
+                .map_err::<Box<rhai::EvalAltResult>, _>(|e| e.to_string().into())?;
 
                 msg_guard.add_header("DKIM-Signature", &signature.get_signature_value());
 
