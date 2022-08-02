@@ -287,30 +287,30 @@ private fn sys_verify_dkim(policy) {
             for key in sys::get_public_key(srv(), signature, policy.on_multiple_key_records) {
                 try {
                     sys::verify_dkim(msg(), signature, key);
-                    log("warn", `DKIM signature successfully verified`);
+                    log("warn", "DKIM signature successfully verified");
 
                     if key.has_debug_flag {
-                        log("warn", `DKIM signature contains debug_flag, continuing`);
+                        log("warn", "DKIM signature contains `debug_flag`, continuing");
                         continue;
                     }
 
                     // header.b & header.a can be set optionally
                     return `dkim=pass header.d=${signature.sdid} header.i=${signature.auid};`;
                 } catch (e) {
-                    log("warn", `DKIM signature verifification failed: ${e}`);
+                    log("warn", `DKIM signature verifification failed: {}`, e.to_debug());
                     let e = sys::handle_dkim_error(e);
                     last_error = `dkim=${e}`;
                 }
             }
 
         } catch (e) {
-            log("warn", `DKIM signature invalid: ${e}`);
+            log("warn", `DKIM signature invalid: {}`, e.to_debug());
             let e = sys::handle_dkim_error(e);
             last_error = `dkim=${e}`;
         }
     }
 
-    log("warn", "no valid DKIM signature, returning");
+    log("warn", `no valid DKIM signature, returning: '${last_error}'`);
     last_error
 }
 
