@@ -16,7 +16,7 @@
 */
 
 use super::{HashAlgorithm, PublicKey, Signature, SigningAlgorithm};
-use vsmtp_common::RawBody;
+use vsmtp_common::{re::log, RawBody};
 
 /// Possible error produced by [`Signature::verify`]
 #[derive(Debug, thiserror::Error)]
@@ -113,16 +113,19 @@ impl Signature {
             <rsa::RsaPublicKey as rsa::pkcs1::DecodeRsaPublicKey>::from_pkcs1_der(&key.public_key)
                 .map(Box::new)
                 .or_else(|e| {
-                    println!("invalid format: {e}");
+                    log::trace!("invalid format: {e}");
                     <rsa::RsaPublicKey as rsa::pkcs8::DecodePublicKey>::from_public_key_der(
                         &key.public_key,
                     )
                     .map(Box::new)
                 })
                 .map_err(|e| {
-                    println!("invalid format: {e}");
+                    log::trace!("invalid format: {e}");
                     VerifierError::KeyFormatInvalid
                 })?;
+
+        log::debug!("headers_hash={headers_hash:?}");
+        dbg!(&headers_hash);
 
         rsa::PublicKey::verify(
             key.as_ref(),

@@ -1,40 +1,40 @@
 Delivered-To: mlala@negabit.com
-Received: from mta-01.virid-it.com by negabit.com with SMTP id 16594368003893581659436800379Z3FCa17F4cRP8qJcvBj2oQHiJJurFcJZBiCC47610; Tue, 02 Aug 2022 10:40:00 +0000
-X-VSMTP: id="16594368003893581659436800379Z3FCa17F4cRP8qJcvBj2oQHiJJurFcJZBiCC47610"; version="1.1.3"; status="next"
+Received: from mta-01.virid-it.com by negabit.com with SMTP id 16594485800694041659448580058jeq14R4R0MmWD2IarYwbeqzWwDq5cuTX2A3K49801; Tue, 02 Aug 2022 13:56:20 +0000
+X-VSMTP: id="16594485800694041659448580058jeq14R4R0MmWD2IarYwbeqzWwDq5cuTX2A3K49801"; version="1.1.3"; status="next"
 Authentication-Results: negabit.com;
   dkim=fail
 Received: from [192.168.0.22] (85-170-11-26.rev.numericable.fr [85.170.11.26])
 	(using TLSv1.3 with cipher TLS_AES_128_GCM_SHA256 (128/128 bits)
 	 key-exchange ECDHE (P-256) server-signature RSA-PSS (2048 bits))
 	(No client certificate requested)
-	by mta-01.virid-it.com (Postfix) with ESMTPSA id 3330A7E2E0
-	for <mlala@negabit.com>; Tue,  2 Aug 2022 10:39:57 +0000 (UTC)
+	by mta-01.virid-it.com (Postfix) with ESMTPSA id E0DFF7E2E0
+	for <mlala@negabit.com>; Tue,  2 Aug 2022 13:56:16 +0000 (UTC)
 Authentication-Results: mta-01.virid-it.com; dmarc=fail (p=quarantine dis=none) header.from=virid-it.com
 DKIM-Signature: v=1; a=rsa-sha256; c=simple/simple; d=virid-it.com; s=mail;
-	t=1659436797; bh=2USFFdTVwUR+DjlKNuY6dl17V3x+bI9dKvohrzUlgq0=;
-	h=Date:From:Subject:To:From;
-	b=ru6wrouXtoeqxxBz55FKwbdOnM18RiOuPP96YF3drFsDiGVE40xgqkYe4iBgTVRRc
-	 YnckKwX2PlmeG3TGIgDZURGvOrkK6FSZ5E6Lgawk0zyTnUWl7ozYQ4SW0ks7zgIaM1
-	 1QOuY87mi3WtkIwzWWI9OViCN9ZvvBiBfP0hOUAxf043+QxGbIo3A5XJRKBqU+fqGV
-	 DpVBZZlIt+G99MWSWxg3VHp9ZBNFHWlLPUQop3GB/yuCs9E4wjgHJeleUFGTSVtQea
-	 83GXo4iBO0Ir4aEQIyQVIGL2OaMOGjz22tNdLJBBmgodHNlfnntLe9x937A2Ee9OeX
-	 cDwRZwMBgJxl7jlmIVZacgWRYbad6a+kDNdcC0yaTKvB5frjoBpkhiqr6ybTFQWOUw
-	 1bnzGthI5+D1iJJCeOVDLb/eFrEk6AqizAb/je9lXtujcZZato+PKINMZwwnBuX+IC
-	 N4YlZ+qq+Os+y4t5XhvIgU48o7AmxV7Yy3WQ5WYuWKJjEjR1UMfVWkxzL6kJpk+rwd
-	 6Dm7VHERyIYcjoyuuxoOZi9x/HbD8dzMOt15l02HSDMXnNjDVY2UA1SwIEzAhKPw/H
-	 HhF/pOu1iHdjTFbKZkBq1FvznLXTzi2J8obiMhNvEITHy1SbAopXDpI63h0boPdmcs
-	 vyvd5O+ND/WPLupdCgn8qGiE=
-Message-ID: <eb7c73f9-a06b-ad3e-ab8a-ec160301f30a@virid-it.com>
-Date: Tue, 2 Aug 2022 12:39:56 +0200
+	t=1659448576; bh=Lf0+rrLHO0uC8Xeqlb/cJ6EnGha3+Gyhru+nwSbaxK4=;
+	h=Date:To:From:Subject:From;
+	b=sbBd2Gx/c+Zrbab45o3x0egNSqFWhKFrb0GG3hGsOudgSIdvQgMZbzT2Ry48c+jxM
+	 vkA5ao0BPGx6kkyEHbn6a8tQxlpP1W5sSmaO7vVrDZsJIzwMAtRfaDPKQsu5ZXansM
+	 GI0S/kIEFmqZ7PRslsmmWbpIcd9xPj0nYqGNEVfoHy8ueHKGc0Sjhb9KyZzvO8cdcW
+	 Y75PhGhqZGMGwgXUnu2Ep/QsMmpviNwMq6GbBeJoRqb+yJx9Lpq03KwCQAyqjPGHV8
+	 +mWJu9JCD4+s6mj/qXtqMSkyfwRM4rsjMMItPloesoKSL1ZQH4N0qwkcauKJxjGdx9
+	 uH+qLV5yuiGy1+ClIcyCoEVBMRCkI/WmZqf9j0ZXZgRGYb3cxlqK4ttEVin7LKdvn2
+	 5wzF9tTLW90hRb/0ZPyeyHLYAVupB2HgSzgCEyi11zzepTvgtHLQaMS8PcG9WX4icN
+	 c9xNgEBI7eiYd+SqIcnGLLhejismFCTz80lKi3y1sDOyNGAZW0cu8/e7mHd9jWNReq
+	 n90Na5OJ2QLEu6dN4Noowi/rB6OiJ6XWK0LP8fsIMbCAi+JRvLrHcUS/cvkgSwqH3f
+	 AOe+GhVCCblA+afVD60QP+n2+MosQLDPxhk+2B29nfaVZ9NVIEKIIm+CWru0D5Y1RX
+	 UE8lCNdrROYKUwqv2OrxrqYU=
+Message-ID: <f8c5a528-3616-70c9-1ff3-048437351fb7@virid-it.com>
+Date: Tue, 2 Aug 2022 15:56:16 +0200
 MIME-Version: 1.0
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:102.0) Gecko/20100101
  Thunderbird/102.1.0
-From: Pag <pag@virid-it.com>
-Subject: ehlo world
-To: mlala@negabit.com
 Content-Language: en-US
+To: mlala@negabit.com
+From: Pag <pag@virid-it.com>
+Subject: recreate log file
 Content-Type: text/plain; charset=UTF-8; format=flowed
 Content-Transfer-Encoding: 7bit
 
-foo bar
+azeaze
 
