@@ -29,7 +29,7 @@ use crate::rule_state::RuleState;
 use anyhow::Context;
 use rhai::module_resolvers::FileModuleResolver;
 use rhai::packages::Package;
-use rhai::{plugin::EvalAltResult, Engine, Scope, AST};
+use rhai::{Engine, Scope, AST};
 use vsmtp_common::mail_context::MailContext;
 use vsmtp_common::queue::Queue;
 use vsmtp_common::queue_path;
@@ -247,6 +247,7 @@ impl RuleEngine {
             None => &directive_set[..],
         };
 
+        #[allow(clippy::single_match_else)]
         match self.execute_directives(rule_state, directive_set, smtp_state) {
             Ok(status) => {
                 if status.stop() {
@@ -258,8 +259,8 @@ impl RuleEngine {
 
                 status
             }
-            Err(error) => {
-                log::error!("{}", Self::parse_stage_error(error, smtp_state));
+            Err(_) => {
+                // TODO: keep the error for the `deferred` info
 
                 // if an error occurs, the engine denies the connection by default.
                 let state_if_error = deny();
@@ -287,30 +288,6 @@ impl RuleEngine {
         }
 
         Ok(status)
-    }
-
-    fn parse_stage_error(error: Box<EvalAltResult>, smtp_state: &StateSMTP) -> String {
-        match *error {
-            // NOTE: since all errors are caught and thrown in "run_rules", errors
-            //       are always wrapped in ErrorInFunctionCall.
-            EvalAltResult::ErrorRuntime(error, _) if error.is::<rhai::Map>() => {
-                let error = error.cast::<rhai::Map>();
-                let rule = error
-                    .get("rule")
-                    .map_or_else(|| "unknown rule".to_string(), ToString::to_string);
-                let error = error.get("message").map_or_else(
-                    || "vsl internal unexpected error".to_string(),
-                    ToString::to_string,
-                );
-
-                format!(
-                    "stage '{smtp_state}' skipped => rule engine failed in '{rule}':\n\t{error}"
-                )
-            }
-            _ => {
-                format!("stage '{smtp_state}' skipped => rule engine failed:\n\t{error}",)
-            }
-        }
     }
 
     /// create a rhai engine to compile all scripts with vsl's configuration.
