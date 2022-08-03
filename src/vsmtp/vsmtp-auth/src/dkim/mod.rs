@@ -24,6 +24,7 @@ mod verify;
 
 #[cfg(test)]
 mod tests {
+    mod hash_header;
     mod verify;
 }
 

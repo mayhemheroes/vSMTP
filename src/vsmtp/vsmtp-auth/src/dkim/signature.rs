@@ -157,12 +157,10 @@ impl Signature {
         out
     }
 
-    ///
-    #[must_use]
-    pub fn get_header_hash(&self, message: &RawBody) -> Vec<u8> {
+    pub(crate) fn get_header_for_hash(&self, message: &RawBody) -> String {
         let mut last_index = std::collections::HashMap::<&str, usize>::new();
 
-        let headers = message.headers();
+        let headers = message.headers(true);
 
         let mut output = vec![];
         for header in &self.headers_field {
@@ -191,10 +189,17 @@ impl Signature {
                 .header
                 .canonicalize_header(&self.signature_without_headers()),
         );
+        output
+    }
 
-        log::debug!("header before hash={:?}", output);
+    ///
+    #[must_use]
+    pub fn get_header_hash(&self, message: &RawBody) -> Vec<u8> {
+        let header = self.get_header_for_hash(message);
 
-        self.signing_algorithm.hash(output)
+        log::debug!("header before hash={:?}", header);
+
+        self.signing_algorithm.hash(header)
     }
 }
 

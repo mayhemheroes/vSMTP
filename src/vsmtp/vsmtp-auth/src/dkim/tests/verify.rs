@@ -75,16 +75,6 @@ async fn mail_2() {
     verify(include_str!("mail_2.eml")).await;
 }
 
-#[tokio::test]
-async fn mail_3() {
-    verify(include_str!("mail_3.eml")).await;
-}
-
-#[tokio::test]
-async fn mail_4() {
-    verify(include_str!("mail_4.eml")).await;
-}
-
 #[test]
 #[ignore = "need `sudo apt install python3-dkim`"]
 fn mail_1_3rd_party() {
@@ -95,16 +85,4 @@ fn mail_1_3rd_party() {
 #[ignore = "need `sudo apt install python3-dkim`"]
 fn mail_2_3rd_party() {
     verify_3rd_party("./src/dkim/tests/mail_2.eml");
-}
-
-#[test]
-#[ignore = "need `sudo apt install python3-dkim`"]
-fn mail_3_3rd_party() {
-    verify_3rd_party("./src/dkim/tests/mail_3.eml");
-}
-
-#[test]
-#[ignore = "need `sudo apt install python3-dkim`"]
-fn mail_4_3rd_party() {
-    verify_3rd_party("./src/dkim/tests/mail_4.eml");
 }
