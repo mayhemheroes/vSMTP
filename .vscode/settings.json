@@ -55,6 +55,7 @@
         "opentelemetry",
         "pemfile",
         "permerror",
+        "PKCS",
         "PKCS8",
         "postq",
         "prepending",

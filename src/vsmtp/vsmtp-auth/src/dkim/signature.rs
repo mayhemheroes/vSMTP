@@ -16,7 +16,7 @@
 */
 
 use super::{Canonicalization, SigningAlgorithm};
-use vsmtp_common::RawBody;
+use vsmtp_common::{re::log, RawBody};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ParseError {
@@ -191,6 +191,8 @@ impl Signature {
                 .header
                 .canonicalize_header(&self.signature_without_headers()),
         );
+
+        log::debug!("header before hash={}", output);
 
         self.signing_algorithm.hash(output)
     }

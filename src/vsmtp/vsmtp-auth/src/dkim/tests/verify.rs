@@ -72,17 +72,17 @@ async fn mail_1() {
 
 #[tokio::test]
 async fn mail_2() {
-    verify(&include_str!("mail_2.eml").replace('\n', "\r\n")).await;
+    verify(include_str!("mail_2.eml")).await;
 }
 
 #[tokio::test]
 async fn mail_3() {
-    verify(&include_str!("mail_3.eml").replace('\n', "\r\n")).await;
+    verify(include_str!("mail_3.eml")).await;
 }
 
 #[tokio::test]
 async fn mail_4() {
-    verify(&include_str!("mail_4.eml").replace('\n', "\r\n")).await;
+    verify(include_str!("mail_4.eml")).await;
 }
 
 #[test]
