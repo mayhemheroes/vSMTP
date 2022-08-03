@@ -23,7 +23,7 @@ async fn verify(mail: &str) {
     let body = MessageBody::try_from(mail).unwrap();
 
     let resolver = trust_dns_resolver::TokioAsyncResolver::tokio(
-        trust_dns_resolver::config::ResolverConfig::google(),
+        trust_dns_resolver::config::ResolverConfig::cloudflare(),
         ResolverOpts::default(),
     )
     .unwrap();
@@ -88,17 +88,23 @@ async fn mail_4() {
 #[test]
 #[ignore = "need `sudo apt install python3-dkim`"]
 fn mail_1_3rd_party() {
-    verify_3rd_party("./src/tests/mail_1.eml");
+    verify_3rd_party("./src/dkim/tests/mail_1.eml");
 }
 
 #[test]
 #[ignore = "need `sudo apt install python3-dkim`"]
 fn mail_2_3rd_party() {
-    verify_3rd_party("./src/tests/mail_2.eml");
+    verify_3rd_party("./src/dkim/tests/mail_2.eml");
 }
 
 #[test]
 #[ignore = "need `sudo apt install python3-dkim`"]
 fn mail_3_3rd_party() {
-    verify_3rd_party("./src/tests/mail_3.eml");
+    verify_3rd_party("./src/dkim/tests/mail_3.eml");
+}
+
+#[test]
+#[ignore = "need `sudo apt install python3-dkim`"]
+fn mail_4_3rd_party() {
+    verify_3rd_party("./src/dkim/tests/mail_4.eml");
 }

@@ -1,39 +1,35 @@
-Delivered-To: mlala@negabit.com
-Received: from mta-01.virid-it.com by negabit.com with SMTP id 16594524716198511659452471609YWdTBPF8ObJESwxyqGKWQsqsk4z0nwtQk1rn51160; Tue, 02 Aug 2022 15:01:11 +0000
-X-VSMTP: id="16594524716198511659452471609YWdTBPF8ObJESwxyqGKWQsqsk4z0nwtQk1rn51160"; version="1.1.3"; status="next"
-Authentication-Results: negabit.com;
-  dkim=fail
 Received: from [192.168.0.22] (85-170-11-26.rev.numericable.fr [85.170.11.26])
 	(using TLSv1.3 with cipher TLS_AES_128_GCM_SHA256 (128/128 bits)
 	 key-exchange ECDHE (P-256) server-signature RSA-PSS (2048 bits) server-digest SHA256)
 	(No client certificate requested)
-	by mta-01.virid-it.com (Postfix) with ESMTPSA id 698177E2E0
-	for <mlala@negabit.com>; Tue,  2 Aug 2022 15:01:08 +0000 (UTC)
+	by mta-01.virid-it.com (Postfix) with ESMTPSA id 063557E2E0
+	for <mlala@negabit.com>; Wed,  3 Aug 2022 11:07:05 +0000 (UTC)
 Authentication-Results: mta-01.virid-it.com; dmarc=fail (p=quarantine dis=none) header.from=virid-it.com
 DKIM-Signature: v=1; a=rsa-sha256; c=simple/simple; d=virid-it.com; s=mail;
-	t=1659452468; bh=F74UkWGuUuXBEjMAnm3kLsVh+7w2vjImcMcW+HuvvoE=;
+	t=1659524826; bh=Touenr7dUe0Mxv9r3OfnQ+GHpFRIdDa3Wa3TWnDOQKs=;
 	h=Date:To:From:Subject:From;
-	b=htV/nDV/dx1PbH9vxduv6Jf//JtggcnwsTWGjxyKFZpc9TN0ven523+1WKfoKNeNc
-	 4+SjJ1u84uK6+i1ovL0BvdWHU3U/woLbZnVIUEfY16J57RCwc3yzjGMe1sr4e0VKkN
-	 ReohtgSwcpYo9LicWN/EWGVb5CD3xoI/3gNr6Xd5FqNo3s1FTIpt/yDGbj1Bq4JHQL
-	 Bt3ckP0jxMP4S1UKbsTtusq9BHGqcgttmWP2Tm5CgdQGuaeazxLabzIh7z3Hd/Vmc6
-	 FxwXZ+w2JdVk6KgV8fFUAn/BGx+xLXOycvE83eqLtFFjYMJDhsK0Tt8/vfKor9gXK5
-	 pkRK0WubSYGGFlCsxnLiQE6UkEkp7FTsoBHEId09LAXwwnkiFrEjuPWFrtdqpRVYFC
-	 V+YGLyVyIitEL+yDLNPjfs3OoCxkZI9Z2jEb2YubXsLTWUg8d19gS+jpS9fO7gac7k
-	 G2xS2LSyUV6Hv4CMXvjssPekDkKg9FkycpH/zaAqmmQV6C8iAsK3wFvGUNWQPjKiQI
-	 x0y8bstIPAx/r90AgRhpR/P8rv9xu6be4zlV5Ob4YUwSSLFrnmXPu3Vk2t9tybulk8
-	 Os7oy+1uca45Ia0W3SEQoWCdh6pDl3cE02ARr56HtuM+54vILfKsykE/SBtgmm2UcN
-	 WaUNReCSbHrOwQzdtkBtuTGg=
-Message-ID: <01b66d60-6c2c-44a3-20f1-e812e7b83067@virid-it.com>
-Date: Tue, 2 Aug 2022 17:01:08 +0200
+	b=f32P8RIJIoewf6ydWvMsevjDW3hwtUtzKvTdye17aRltU2UQF3aaNcKLOFxI0m8Ud
+	 xryya1SVocXtvohEO7vftuwd9RzOW+FNhCJg2eoPhJJPnSqzqlHdgRo9M1vc66Qblo
+	 4GjvbVr7jo3I+b7naMYy9sbCYleKc+pyluZak8jXm9bfPceJO6wB++n++eiEMNefPW
+	 /HI/o2gzHZt15Aw43mlAtGjm7xBLaagUFdLyMKnyGTy+zTFciIjmVMJSCYinB35/zb
+	 gLRQEGzijgI60Neija/dmTz1a7levbDHvcaeJCeVYaYwGWjylbcKyx2Hv92+neDRG/
+	 dy5c3ZU1mjE/mAeN/UMX7sV7ER36kelRIy8iXNV5e5LixO7ZNjLXc4dwNZ/ojLqDH8
+	 rqg1+t89u0SVymOLZmaq7M5e9a3qANRPR4a3bg6ZY0mM+9bfvnZBGO2kWWo14pGEqv
+	 qYfBD92rnItUH/SyAk1LkAYf5vCw+vLAy9fKGa3QGP9c28JllXs3omG/EJtQAG2lm9
+	 j/vGnlRnwnu2sUDtyG35GJp+wlkZ+GgEvri1d3x/inYlWIGPI56emjdMuEUAJ8NQE1
+	 jfqPastz0Fd1DdVxsu6LIs7y9i8D9kYQM7b2otWqCbvK7On60tLjNwchQ3KuBj9/lw
+	 uzk2xHvN7xbITf254Ok5zMS4=
+Message-ID: <b209a868-0468-bf95-d2ab-b6ea38f87eba@virid-it.com>
+Date: Wed, 3 Aug 2022 13:07:05 +0200
 MIME-Version: 1.0
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:102.0) Gecko/20100101
  Thunderbird/102.1.0
 Content-Language: en-US
 To: mlala@negabit.com
 From: Pag <pag@virid-it.com>
-Subject: again
+Subject: better logs
 Content-Type: text/plain; charset=UTF-8; format=flowed
 Content-Transfer-Encoding: 7bit
 
-after tweak log
+okok
+

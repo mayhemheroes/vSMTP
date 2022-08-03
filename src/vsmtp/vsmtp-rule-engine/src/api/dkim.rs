@@ -29,59 +29,7 @@ use vsmtp_common::{
     MessageBody,
 };
 
-#[derive(Debug)]
-struct DnsError(trust_dns_resolver::error::ResolveError);
-
-impl Default for DnsError {
-    fn default() -> Self {
-        Self(trust_dns_resolver::error::ResolveError::from(
-            trust_dns_resolver::error::ResolveErrorKind::Message("`default` invoked"),
-        ))
-    }
-}
-
-impl std::fmt::Display for DnsError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-#[derive(Debug, strum::EnumString, strum::EnumMessage, thiserror::Error)]
-enum DkimErrors {
-    #[strum(message = "neutral", detailed_message = "signature_parsing_failed")]
-    #[error("the parsing of the signature failed: `{inner}`")]
-    SignatureParsingFailed {
-        inner: <Signature as std::str::FromStr>::Err,
-    },
-    #[strum(message = "neutral", detailed_message = "key_parsing_failed")]
-    #[error("the parsing of the public key failed: `{inner}`")]
-    KeyParsingFailed {
-        inner: <PublicKey as std::str::FromStr>::Err,
-    },
-    #[strum(message = "neutral", detailed_message = "invalid_argument")]
-    #[error("invalid argument: `{inner}`")]
-    InvalidArgument { inner: String },
-    #[strum(message = "temperror", detailed_message = "temp_dns_error")]
-    #[error("temporary dns error: `{inner}`")]
-    TempDnsError { inner: DnsError },
-    #[strum(message = "permerror", detailed_message = "perm_dns_error")]
-    #[error("permanent dns error: `{inner}`")]
-    PermDnsError { inner: DnsError },
-    #[strum(message = "fail", detailed_message = "signature_mismatch")]
-    #[error("the signature does not match: `{inner}`")]
-    SignatureMismatch { inner: VerifierError },
-}
-
-impl From<DkimErrors> for Box<rhai::EvalAltResult> {
-    fn from(this: DkimErrors) -> Self {
-        Box::new(rhai::EvalAltResult::ErrorSystem(
-            strum::EnumMessage::get_detailed_message(&this)
-                .expect("`DkimErrors` must have a `detailed message` for each variant")
-                .to_string(),
-            Box::new(this),
-        ))
-    }
-}
+pub use dkim_rhai::*;
 
 #[rhai::plugin::export_module]
 mod dkim_rhai {
@@ -196,7 +144,59 @@ mod dkim_rhai {
     }
 }
 
-pub use dkim_rhai::*;
+#[derive(Debug)]
+struct DnsError(trust_dns_resolver::error::ResolveError);
+
+impl Default for DnsError {
+    fn default() -> Self {
+        Self(trust_dns_resolver::error::ResolveError::from(
+            trust_dns_resolver::error::ResolveErrorKind::Message("`default` invoked"),
+        ))
+    }
+}
+
+impl std::fmt::Display for DnsError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[derive(Debug, strum::EnumString, strum::EnumMessage, thiserror::Error)]
+enum DkimErrors {
+    #[strum(message = "neutral", detailed_message = "signature_parsing_failed")]
+    #[error("the parsing of the signature failed: `{inner}`")]
+    SignatureParsingFailed {
+        inner: <Signature as std::str::FromStr>::Err,
+    },
+    #[strum(message = "neutral", detailed_message = "key_parsing_failed")]
+    #[error("the parsing of the public key failed: `{inner}`")]
+    KeyParsingFailed {
+        inner: <PublicKey as std::str::FromStr>::Err,
+    },
+    #[strum(message = "neutral", detailed_message = "invalid_argument")]
+    #[error("invalid argument: `{inner}`")]
+    InvalidArgument { inner: String },
+    #[strum(message = "temperror", detailed_message = "temp_dns_error")]
+    #[error("temporary dns error: `{inner}`")]
+    TempDnsError { inner: DnsError },
+    #[strum(message = "permerror", detailed_message = "perm_dns_error")]
+    #[error("permanent dns error: `{inner}`")]
+    PermDnsError { inner: DnsError },
+    #[strum(message = "fail", detailed_message = "signature_mismatch")]
+    #[error("the signature does not match: `{inner}`")]
+    SignatureMismatch { inner: VerifierError },
+}
+
+impl From<DkimErrors> for Box<rhai::EvalAltResult> {
+    fn from(this: DkimErrors) -> Self {
+        Box::new(rhai::EvalAltResult::ErrorSystem(
+            strum::EnumMessage::get_detailed_message(&this)
+                .expect("`DkimErrors` must have a `detailed message` for each variant")
+                .to_string(),
+            Box::new(this),
+        ))
+    }
+}
 
 struct Impl;
 
