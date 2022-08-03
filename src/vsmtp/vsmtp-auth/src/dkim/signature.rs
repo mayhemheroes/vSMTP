@@ -192,7 +192,7 @@ impl Signature {
                 .canonicalize_header(&self.signature_without_headers()),
         );
 
-        log::debug!("header before hash={}", output);
+        log::debug!("header before hash={:?}", output);
 
         self.signing_algorithm.hash(output)
     }
