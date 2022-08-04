@@ -304,6 +304,7 @@ private fn sys_verify_dkim(policy) {
             }
 
         } catch (e) {
+            print(e);
             log("warn", `DKIM signature invalid: ${e.to_debug()}`);
             let e = sys::handle_dkim_error(e);
             last_error = `dkim=${e}`;
@@ -342,9 +343,10 @@ fn verify_dkim() {
 
 /// Produce a `DKIM-Signature` header.
 fn sign_dkim(selector, headers_field, canonicalization) {
-    sys::sign_dkim(msg(), ctx(), srv(), selector, headers_field, canonicalization)
+    let signature = sys::generate_signature_dkim(msg(), ctx(), srv(), selector, headers_field, canonicalization);
+    prepend_header("DKIM-Signature", signature);
 }
 
 fn sign_dkim(selector) {
-    sys::sign_dkim(msg(), ctx(), srv(), selector, ["From", "To", "Date", "Subject"], "simple/relaxed")
+    sign_dkim(msg(), ctx(), srv(), selector, ["From", "To", "Date", "Subject", "From"], "simple/relaxed")
 }

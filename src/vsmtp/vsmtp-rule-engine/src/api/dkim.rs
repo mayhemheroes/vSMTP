@@ -23,11 +23,7 @@ use rhai::plugin::{
 use vsmtp_auth::dkim::{
     Canonicalization, CanonicalizationAlgorithm, PublicKey, Signature, VerifierError,
 };
-use vsmtp_common::{
-    mail_context::MailContext,
-    re::{log, tokio},
-    MessageBody,
-};
+use vsmtp_common::{mail_context::MailContext, re::tokio, MessageBody};
 
 pub use dkim_rhai::*;
 
@@ -37,19 +33,41 @@ mod dkim_rhai {
     /// get the dkim status from an error produced by this module
     #[rhai_fn(global, return_raw)]
     pub fn handle_dkim_error(err: rhai::Dynamic) -> EngineResult<String> {
-        println!("{err:?}");
+        let type_name = err.type_name();
+        let map = err
+            .try_cast::<rhai::Map>()
+            .ok_or_else::<Box<rhai::EvalAltResult>, _>(|| {
+                Box::new(
+                    format!("expected a map as error from dkim module, got `{type_name}`").into(),
+                )
+            })?;
 
-        todo!()
+        println!("{map:?}");
 
-        // let err = err.cast::<Box<rhai::EvalAltResult>>();
-        //
-        // let r#type = DkimErrors::try_from(err).map_err::<Box<rhai::EvalAltResult>, _>(|e| {
-        //     format!("not the right type: `{e}`").into()
-        // })?;
-        //
-        // Ok(strum::EnumMessage::get_message(&r#type)
-        //     .expect("`DkimErrors` must have a `message` for each variant")
-        //     .to_string())
+        let r#type = map
+            .get("type")
+            .ok_or_else::<Box<rhai::EvalAltResult>, _>(|| {
+                Box::new("expected a field `type` in dkim module's error".into())
+            })?
+            .clone()
+            .try_cast::<String>()
+            .ok_or_else::<Box<rhai::EvalAltResult>, _>(|| {
+                Box::new("expected the field `type` to be a `string` in dkim's error".into())
+            })?;
+
+        let dkim_error = <DkimErrors as strum::IntoEnumIterator>::iter()
+            .find(|i| {
+                strum::EnumMessage::get_detailed_message(i)
+                    .expect("`DkimErrors` must have a `detailed message` for each variant")
+                    == r#type
+            })
+            .ok_or_else::<Box<rhai::EvalAltResult>, _>(|| {
+                Box::new(format!("unknown `DkimErrors` got: `{type}`").into())
+            })?;
+
+        Ok(strum::EnumMessage::get_message(&dkim_error)
+            .expect("`DkimErrors` must have a `message` for each variant")
+            .to_string())
     }
 
     /// return the `sdid` property of the [`Signature`]
@@ -121,18 +139,18 @@ mod dkim_rhai {
     ///
     #[rhai_fn(global, pure, return_raw)]
     #[allow(clippy::needless_pass_by_value)]
-    pub fn sign_dkim(
+    pub fn generate_signature_dkim(
         message: &mut Message,
         context: Context,
         server: Server,
         selector: &str,
         headers_field: rhai::Array,
         canonicalization: &str,
-    ) -> EngineResult<()> {
+    ) -> EngineResult<String> {
         let mut message_guard = vsl_guard_ok!(message.write());
         let context_guard = vsl_guard_ok!(context.read());
 
-        super::Impl::sign_dkim(
+        super::Impl::generate_signature_dkim(
             &mut message_guard,
             &context_guard,
             &server,
@@ -161,7 +179,7 @@ impl std::fmt::Display for DnsError {
     }
 }
 
-#[derive(Debug, strum::EnumString, strum::EnumMessage, thiserror::Error)]
+#[derive(Debug, strum::EnumMessage, strum::EnumIter, thiserror::Error)]
 enum DkimErrors {
     #[strum(message = "neutral", detailed_message = "signature_parsing_failed")]
     #[error("the parsing of the signature failed: `{inner}`")]
@@ -189,11 +207,18 @@ enum DkimErrors {
 
 impl From<DkimErrors> for Box<rhai::EvalAltResult> {
     fn from(this: DkimErrors) -> Self {
-        Box::new(rhai::EvalAltResult::ErrorSystem(
-            strum::EnumMessage::get_detailed_message(&this)
-                .expect("`DkimErrors` must have a `detailed message` for each variant")
-                .to_string(),
-            Box::new(this),
+        Box::new(rhai::EvalAltResult::ErrorRuntime(
+            rhai::Dynamic::from_map(rhai::Map::from_iter([
+                (
+                    "type".into(),
+                    strum::EnumMessage::get_detailed_message(&this)
+                        .expect("`DkimErrors` must have a `detailed message` for each variant")
+                        .to_string()
+                        .into(),
+                ),
+                ("inner".into(), rhai::Dynamic::from(this.to_string())),
+            ])),
+            rhai::Position::NONE,
         ))
     }
 }
@@ -273,14 +298,14 @@ impl Impl {
     }
 
     #[tracing::instrument(skip(server), ret, err)]
-    fn sign_dkim(
+    fn generate_signature_dkim(
         message: &mut MessageBody,
         context: &MailContext,
         server: &Server,
         selector: &str,
         headers_field: &rhai::Array,
         canonicalization: &str,
-    ) -> Result<(), DkimErrors> {
+    ) -> Result<String, DkimErrors> {
         let (header, body) =
             canonicalization
                 .split_once('/')
@@ -326,9 +351,7 @@ impl Impl {
                     inner: format!("the signature failed: `{e}`"),
                 })?;
 
-                message.add_header("DKIM-Signature", &signature.get_signature_value());
-
-                Ok(())
+                Ok(signature.get_signature_value())
             }
         }
     }
