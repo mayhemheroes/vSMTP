@@ -304,7 +304,6 @@ private fn sys_verify_dkim(policy) {
             }
 
         } catch (e) {
-            print(e);
             log("warn", `DKIM signature invalid: ${e.to_debug()}`);
             let e = sys::handle_dkim_error(e);
             last_error = `dkim=${e}`;

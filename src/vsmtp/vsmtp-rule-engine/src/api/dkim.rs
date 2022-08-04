@@ -42,8 +42,6 @@ mod dkim_rhai {
                 )
             })?;
 
-        println!("{map:?}");
-
         let r#type = map
             .get("type")
             .ok_or_else::<Box<rhai::EvalAltResult>, _>(|| {
