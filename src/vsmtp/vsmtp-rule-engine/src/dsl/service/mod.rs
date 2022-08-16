@@ -15,7 +15,10 @@
  *
 */
 
-use vsmtp_common::transfer::SmtpConnection;
+use vsmtp_common::{
+    re::{r2d2, r2d2_mysql},
+    transfer::SmtpConnection,
+};
 
 pub mod cmd;
 pub mod databases;
@@ -54,6 +57,14 @@ pub enum Service {
         fd: std::fs::File,
     },
 
+    /// A database connector based on MySQL.
+    MySQLDatabase {
+        /// The url to the database.
+        url: String,
+        /// connection pool for the database.
+        pool: r2d2::Pool<r2d2_mysql::MysqlConnectionManager>,
+    },
+
     /// A service that handles smtp transactions.
     Smtp {
         /// A transport to handle transactions to the delegate.
@@ -71,6 +82,7 @@ impl std::fmt::Display for Service {
             match self {
                 Service::Cmd { .. } => "cmd",
                 Self::CSVDatabase { .. } => "csv-database",
+                Self::MySQLDatabase { .. } => "mysql-database",
                 Self::Smtp { .. } => "smtp",
             }
         )

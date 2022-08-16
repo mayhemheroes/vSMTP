@@ -58,7 +58,7 @@ pub fn parse_service(
         },
         5 => match symbols[4].as_str() {
             // database formats
-            "csv" => Ok(Some("=".into())),
+            "csv" | "mysql" => Ok(Some("=".into())),
             // an expression, in the case of a regular service, whe are done parsing.
             _ => Ok(None),
         },
@@ -130,6 +130,7 @@ fn open_database(
 
         let service = match database_type {
             "csv" => super::databases::csv::parse_csv_database(service_name, &options)?,
+            "mysql" => super::databases::mysql::parse_mysql_database(service_name, &options)?,
             t => {
                 return Err(rhai::EvalAltResult::ErrorMismatchDataType(
                     "csv".to_string(),
