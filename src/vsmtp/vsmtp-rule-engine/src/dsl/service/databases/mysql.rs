@@ -83,8 +83,10 @@ pub fn parse_mysql_database(db_name: &str, options: &rhai::Map) -> EngineResult<
     let user = options.get("user");
     let password = options.get("password");
 
-    if let (Some(user), Some(password)) = (user, password) {
-        url = format!("{url}?user={user}&password={password}");
+    match (user, password) {
+        (Some(user), Some(password)) => url = format!("{url}?user={user}&password={password}"),
+        (Some(user), None) => url = format!("{url}?user={user}"),
+        _ => {}
     };
 
     let opts = mysql::Opts::from_url(&url).unwrap();
