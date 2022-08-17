@@ -15,7 +15,10 @@
  *
 */
 
-use crate::{api::EngineResult, dsl::service::Service};
+use crate::{
+    api::EngineResult,
+    dsl::service::{get_or_default, Service},
+};
 use mysql::prelude::Queryable;
 use vsmtp_common::re::anyhow;
 
@@ -64,15 +67,25 @@ pub fn parse_mysql_database(db_name: &str, options: &rhai::Map) -> EngineResult<
         }
     }
 
-    let url = options.get("url").unwrap().to_string();
-    let connections = u32::try_from(
-        options
-            .get("connections")
-            .unwrap_or(&rhai::Dynamic::from(1))
-            .as_int()
-            .unwrap(),
-    )
-    .unwrap();
+    let mut url = options.get("url").unwrap().to_string();
+    let timeout: std::time::Duration =
+        get_or_default::<String>(db_name, options, "timeout", Some("30s".to_string()))?
+            .parse::<vsmtp_config::re::humantime::Duration>()
+            .map_err::<Box<rhai::EvalAltResult>, _>(|err| err.to_string().into())?
+            .into();
+    let connections = u32::try_from(get_or_default::<rhai::INT>(
+        db_name,
+        options,
+        "connections",
+        Some(4),
+    )?)
+    .map_err::<Box<rhai::EvalAltResult>, _>(|err| err.to_string().into())?;
+    let user = options.get("user");
+    let password = options.get("password");
+
+    if let (Some(user), Some(password)) = (user, password) {
+        url = format!("{url}?user={user}&password={password}");
+    };
 
     let opts = mysql::Opts::from_url(&url).unwrap();
     let builder = mysql::OptsBuilder::from_opts(opts);
@@ -82,6 +95,7 @@ pub fn parse_mysql_database(db_name: &str, options: &rhai::Map) -> EngineResult<
         url,
         pool: r2d2::Pool::builder()
             .max_size(connections)
+            .connection_timeout(timeout)
             .build(manager)
             .unwrap(),
     })
