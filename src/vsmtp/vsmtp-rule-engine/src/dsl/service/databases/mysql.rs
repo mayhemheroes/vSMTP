@@ -20,7 +20,7 @@ use crate::{
     dsl::service::{get_or_default, Service},
 };
 use mysql::prelude::Queryable;
-use vsmtp_common::re::anyhow;
+use vsmtp_common::re::anyhow::{self, Context};
 
 /// A r2d2 connection manager for mysql.
 #[derive(Clone, Debug)]
@@ -57,7 +57,9 @@ pub fn query(
     pool: &r2d2::Pool<MySQLConnectionManager>,
     query: &str,
 ) -> anyhow::Result<Vec<String>> {
-    Ok(pool.get().unwrap().query::<String, _>(query).unwrap())
+    pool.get()?
+        .query::<String, _>(query)
+        .context("failed to execute query on sql database")
 }
 
 pub fn parse_mysql_database(db_name: &str, options: &rhai::Map) -> EngineResult<Service> {
