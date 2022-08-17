@@ -141,8 +141,6 @@ pub mod re {
     pub use strum;
     pub use tokio;
     pub use vsmtp_rsasl;
-    pub use r2d2;
-    pub use r2d2_mysql;
 }
 
 #[doc(hidden)]

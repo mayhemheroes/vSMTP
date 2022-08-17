@@ -16,13 +16,42 @@
 */
 
 use crate::{api::EngineResult, dsl::service::Service};
-use vsmtp_common::re::{
-    anyhow, r2d2,
-    r2d2_mysql::{self, mysql::prelude::Queryable},
-};
+use mysql::prelude::Queryable;
+use vsmtp_common::re::anyhow;
+
+/// A r2d2 connection manager for mysql.
+#[derive(Clone, Debug)]
+pub struct MySQLConnectionManager {
+    params: mysql::Opts,
+}
+
+impl MySQLConnectionManager {
+    pub fn new(params: mysql::OptsBuilder) -> MySQLConnectionManager {
+        MySQLConnectionManager {
+            params: mysql::Opts::from(params),
+        }
+    }
+}
+
+impl r2d2::ManageConnection for MySQLConnectionManager {
+    type Connection = mysql::Conn;
+    type Error = mysql::Error;
+
+    fn connect(&self) -> Result<mysql::Conn, mysql::Error> {
+        mysql::Conn::new(self.params.clone())
+    }
+
+    fn is_valid(&self, conn: &mut mysql::Conn) -> Result<(), mysql::Error> {
+        conn.query("SELECT version()").map(|_: Vec<String>| ())
+    }
+
+    fn has_broken(&self, conn: &mut mysql::Conn) -> bool {
+        self.is_valid(conn).is_err()
+    }
+}
 
 pub fn query(
-    pool: &r2d2::Pool<r2d2_mysql::MysqlConnectionManager>,
+    pool: &r2d2::Pool<MySQLConnectionManager>,
     query: &str,
 ) -> anyhow::Result<Vec<String>> {
     Ok(pool.get().unwrap().query::<String, _>(query).unwrap())
@@ -45,9 +74,9 @@ pub fn parse_mysql_database(db_name: &str, options: &rhai::Map) -> EngineResult<
     )
     .unwrap();
 
-    let opts = r2d2_mysql::mysql::Opts::from_url(&url).unwrap();
-    let builder = r2d2_mysql::mysql::OptsBuilder::from_opts(opts);
-    let manager = r2d2_mysql::MysqlConnectionManager::new(builder);
+    let opts = mysql::Opts::from_url(&url).unwrap();
+    let builder = mysql::OptsBuilder::from_opts(opts);
+    let manager = MySQLConnectionManager::new(builder);
 
     Ok(Service::MySQLDatabase {
         url,

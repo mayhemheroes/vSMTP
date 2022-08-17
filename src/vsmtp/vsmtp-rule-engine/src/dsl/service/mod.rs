@@ -15,10 +15,9 @@
  *
 */
 
-use vsmtp_common::{
-    re::{r2d2, r2d2_mysql},
-    transfer::SmtpConnection,
-};
+use vsmtp_common::transfer::SmtpConnection;
+
+use self::databases::mysql::MySQLConnectionManager;
 
 pub mod cmd;
 pub mod databases;
@@ -62,7 +61,7 @@ pub enum Service {
         /// The url to the database.
         url: String,
         /// connection pool for the database.
-        pool: r2d2::Pool<r2d2_mysql::MysqlConnectionManager>,
+        pool: r2d2::Pool<MySQLConnectionManager>,
     },
 
     /// A service that handles smtp transactions.
