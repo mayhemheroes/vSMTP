@@ -19,8 +19,6 @@ use vsmtp_common::transfer::SmtpConnection;
 
 use crate::api::EngineResult;
 
-use self::databases::mysql::MySQLConnectionManager;
-
 pub mod cmd;
 pub mod databases;
 pub mod parsing;
@@ -58,12 +56,13 @@ pub enum Service {
         fd: std::fs::File,
     },
 
+    #[cfg(feature = "mysql")]
     /// A database connector based on MySQL.
     MySQLDatabase {
         /// The url to the database.
         url: String,
         /// connection pool for the database.
-        pool: r2d2::Pool<MySQLConnectionManager>,
+        pool: r2d2::Pool<self::databases::mysql::MySQLConnectionManager>,
     },
 
     /// A service that handles smtp transactions.
@@ -82,9 +81,10 @@ impl std::fmt::Display for Service {
             "{}",
             match self {
                 Service::Cmd { .. } => "cmd",
-                Self::CSVDatabase { .. } => "csv-database",
-                Self::MySQLDatabase { .. } => "mysql-database",
                 Self::Smtp { .. } => "smtp",
+                Self::CSVDatabase { .. } => "csv-database",
+                #[cfg(feature = "mysql")]
+                Self::MySQLDatabase { .. } => "mysql-database",
             }
         )
     }

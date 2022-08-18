@@ -194,6 +194,7 @@ fn database_query(service: &mut std::sync::Arc<Service>, query: &str) -> EngineR
                         .collect())
                 },
             ),
+        #[cfg(feature = "mysql")]
         Service::MySQLDatabase { pool, .. } => {
             crate::dsl::service::databases::mysql::query(pool, query).map_or_else(
                 |_| Ok(rhai::Array::default()),

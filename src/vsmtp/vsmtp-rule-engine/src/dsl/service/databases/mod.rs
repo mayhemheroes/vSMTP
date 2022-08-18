@@ -1,4 +1,5 @@
 pub mod csv;
+#[cfg(feature = "mysql")]
 pub mod mysql;
 
 /// the access mode to the database.
