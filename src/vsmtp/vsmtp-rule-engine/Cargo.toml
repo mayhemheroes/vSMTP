@@ -73,6 +73,9 @@ time = { version = "0.3.13", default-features = false, features = [
 
 trust-dns-resolver = "0.21.2"
 
+[package.metadata.cargo-udeps.ignore]
+normal = ["r2d2"]
+
 [dev-dependencies]
 vsmtp-mail-parser = { path = "../vsmtp-mail-parser" }
 vsmtp-test = { path = "../vsmtp-test" }
