@@ -111,7 +111,7 @@ mod services {
                 crate::dsl::service::databases::csv::add_record(path, *delimiter, fd, &record[..])
                     .map_err::<Box<EvalAltResult>, _>(|err| err.to_string().into())
             }
-            _ => Err("'db_add' can only be used on a database service.".into()),
+            _ => Err("'db_add' can only be used on a csv database service.".into()),
         }
     }
 
@@ -171,7 +171,7 @@ fn database_remove(service: &mut std::sync::Arc<Service>, key: &str) -> EngineRe
             crate::dsl::service::databases::csv::remove_record(path, key)
                 .map_err::<Box<EvalAltResult>, _>(|err| err.to_string().into())
         }
-        _ => Err("'db_add' can only be used on a database service.".into()),
+        _ => Err("'db_add' can only be used on a csv database service.".into()),
     }
 }
 
