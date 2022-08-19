@@ -3323,6 +3323,7 @@ dependencies = [
  "tracing-subscriber",
  "vsmtp-common",
  "vsmtp-config",
+ "vsmtp-rule-engine",
  "vsmtp-server",
 ]
 
