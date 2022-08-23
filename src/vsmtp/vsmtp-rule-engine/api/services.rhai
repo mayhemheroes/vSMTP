@@ -19,7 +19,7 @@
 //!
 //! Services are external programs that can be used via the functions available in this module.
 
-/// Get the value of a key in a database.
+/// Get the value of a key in a csv database.
 ///
 /// # Args
 ///
@@ -55,7 +55,7 @@
 /// # Module:Services
 fn get(key) { this.db_query(key.to_string()) }
 
-/// Set a record into a database.
+/// Set a record into a csv database.
 ///
 /// # Args
 ///
@@ -81,7 +81,7 @@ fn get(key) { this.db_query(key.to_string()) }
 /// # Module:Services
 fn set(record) { this.db_add(record) }
 
-/// Remove a record from a database.
+/// Remove a record from a csv database.
 ///
 /// # Args
 ///
@@ -106,3 +106,38 @@ fn set(record) { this.db_add(record) }
 ///
 /// # Module:Services
 fn rm(key) { this.db_rm(key.to_string()) }
+
+/// Query a database.
+///
+/// # Args
+///
+/// * `q` - the query to execute.
+///
+/// # Effective smtp stage
+///
+/// All of them.
+///
+/// # Example
+///
+/// ```js
+/// service my_db db:mysql = #{
+///     url: "mysql://localhost/",
+///     user: "guest",
+/// };
+/// ```
+///
+/// ```js
+/// import "services" as svc;
+///
+/// #{
+///     connect: [
+///        action "log database version" || {
+///             let version = svc::my_db.query("SELECT version();");
+///             log("trace", `Database version is ${version}`);
+///        }
+///     ]
+/// }
+/// ```
+///
+/// # Module:Services
+fn query(q) { this.db_query(q) }
