@@ -52,7 +52,7 @@ csv = "1.1"
 mysql = { version = "22.2.0", optional = true }
 
 
-rhai = { version = "1.8.0", features = [
+rhai = { version = "1.9.0", features = [
   "unchecked",
   "sync",
   "internals",
