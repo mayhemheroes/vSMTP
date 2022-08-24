@@ -159,6 +159,28 @@ fn prepend_header(header, value) { sys::prepend_header(msg(), header, value) }
 /// # Module:Message
 fn set_header(header, value) { sys::set_header(msg(), header, value) }
 
+/// Remove an existing header from the message.
+///
+/// # Args
+///
+/// * `header` - the name of the header to remove.
+///
+/// # Effective smtp stage
+///
+/// All of them.
+///
+/// # Example
+/// ```js
+/// #{
+///     postq: [
+///         action "remove X-VSMTP header" || remove_header("X-VSMTP"),
+///     ],
+/// }
+/// ```
+///
+/// # Module:Message
+fn remove_header(header) { sys::remove_header(msg(), header) }
+
 /// Add a recipient to the `To` header of the message.
 ///
 /// # Args

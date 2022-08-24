@@ -194,6 +194,15 @@ impl MessageBody {
         self.raw.prepend_header([format!("{name}: {value}")]);
     }
 
+    /// Remove a header from the list.
+    pub fn remove_header(&mut self, name: &str) {
+        if let Some(parsed) = &mut self.parsed {
+            parsed.remove_header(name);
+        }
+
+        self.raw.remove_header(name);
+    }
+
     /// # Errors
     ///
     /// * the value produced by the [`MailParser`] was not a parsed [`Mail`]

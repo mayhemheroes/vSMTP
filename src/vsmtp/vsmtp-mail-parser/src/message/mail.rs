@@ -244,6 +244,16 @@ impl Mail {
     pub fn push_headers(&mut self, headers: impl IntoIterator<Item = (String, String)>) {
         self.headers.0.extend(headers);
     }
+
+    /// Remove a header from the list.
+    pub fn remove_header(&mut self, name: &str) -> bool {
+        if let Some(index) = self.headers.0.iter().position(|header| header.0 == name) {
+            self.headers.0.remove(index);
+            true
+        } else {
+            false
+        }
+    }
 }
 
 #[cfg(test)]

@@ -144,6 +144,19 @@ mod message_rhai {
     pub fn mail(this: &mut Message) -> EngineResult<String> {
         Ok(vsl_guard_ok!(this.read()).inner().to_string())
     }
+
+    /// Remove a header from the raw or parsed email contained in ctx.
+    #[rhai_fn(global, name = "remove_header", return_raw, pure)]
+    pub fn remove_header_str(message: &mut Message, header: &str) -> EngineResult<()> {
+        super::remove_header(message, header)
+    }
+
+    /// Remove a header from the raw or parsed email contained in ctx.
+    #[allow(clippy::needless_pass_by_value)]
+    #[rhai_fn(global, name = "remove_header", return_raw, pure)]
+    pub fn remove_header_obj(message: &mut Message, header: SharedObject) -> EngineResult<()> {
+        super::remove_header(message, &header.to_string())
+    }
 }
 
 /// Return a list of headers bearing the `name` given as argument.
@@ -191,6 +204,15 @@ where
     U: AsRef<str> + ?Sized,
 {
     vsl_guard_ok!(message.write()).set_header(header.as_ref(), value.as_ref());
+    Ok(())
+}
+
+/// internal generic function to remove a header.
+fn remove_header<T>(message: &mut Message, header: &T) -> EngineResult<()>
+where
+    T: AsRef<str> + ?Sized,
+{
+    vsl_guard_ok!(message.write()).remove_header(header.as_ref());
     Ok(())
 }
 

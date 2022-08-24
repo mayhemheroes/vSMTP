@@ -67,15 +67,23 @@ fn mutate_headers() {
         return deny();
     }
 
-    if get_header("X-New-Header") == "new value!"
-    && get_header("X-Another-Header") == "value of another"
-    && get_header("From") == "<john@doe.com>"
-    && get_header("To") == "green@foo.net"
-    && get_header("X-Yet-Another-Header") == "blah blah blah"
-    && get_header("X-VSMTP-STATUS") == "delivered"
-    && get_header("X-VSMTP-TRACING") == "empty"
-    && get_header("X-VSMTP-SENDER") == "example.com"
+    if !(get_header("X-New-Header") == "new value!")
+    && !(get_header("X-Another-Header") == "value of another")
+    && !(get_header("From") == "<john@doe.com>")
+    && !(get_header("To") == "green@foo.net")
+    && !(get_header("X-Yet-Another-Header") == "blah blah blah")
+    && !(get_header("X-VSMTP-STATUS") == "delivered")
+    && !(get_header("X-VSMTP-TRACING") == "empty")
+    && !(get_header("X-VSMTP-SENDER") == "example.com")
     {
+        return deny();
+    }
+
+    remove_header("X-Another-Header");
+    remove_header(status);
+
+    if !has_header("X-Another-Header")
+    && !has_header(status) {
         next()
     } else {
         deny()

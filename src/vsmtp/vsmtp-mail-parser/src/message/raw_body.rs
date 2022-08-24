@@ -88,7 +88,7 @@ impl RawBody {
         out
     }
 
-    ///
+    /// Search for a header and return its value.
     #[must_use]
     pub fn get_header(&self, name: &str, with_key: bool, with_multiline: bool) -> Option<String> {
         for (idx, header) in self.headers.iter().enumerate() {
@@ -122,7 +122,7 @@ impl RawBody {
         None
     }
 
-    ///
+    /// Set the value of a header or add it if it does not already exist.
     pub fn set_header(&mut self, name: &str, value: &str) {
         for header in &mut self.headers {
             let mut split = header.splitn(2, ": ");
@@ -138,16 +138,30 @@ impl RawBody {
         self.add_header(name, value);
     }
 
-    ///
+    /// Append a header to the list.
     pub fn add_header(&mut self, name: &str, value: &str) {
         // TODO: handle folding ?
         self.headers.push(format!("{name}: {value}"));
     }
 
-    ///
+    /// Prepend a header to the list.
     pub fn prepend_header(&mut self, headers: impl IntoIterator<Item = String>) {
         // TODO: handle folding ?
         self.headers.splice(..0, headers);
+    }
+
+    /// Remove a header from the list.
+    pub fn remove_header(&mut self, name: &str) -> bool {
+        if let Some(index) = self
+            .headers
+            .iter()
+            .position(|header| header.starts_with(name))
+        {
+            self.headers.remove(index);
+            true
+        } else {
+            false
+        }
     }
 }
 
