@@ -79,10 +79,22 @@ fn mutate_headers() {
         return deny();
     }
 
+    prepend_header("X-Multi-Header", "1");
+    prepend_header("X-Multi-Header", "2");
+    prepend_header("X-Multi-Header", "3");
+    prepend_header("X-Multi-Header", "4");
+    prepend_header("X-Multi-Header", "5");
+
+    if has_header("X-Multi-Header") && count_header("X-Multi-Header") != 5 {
+        return deny();
+    }
+
+    while remove_header("X-Multi-Header") {}
     remove_header("X-Another-Header");
     remove_header(status);
 
     if !has_header("X-Another-Header")
+    && !has_header("X-Multi-Header")
     && !has_header(status) {
         next()
     } else {

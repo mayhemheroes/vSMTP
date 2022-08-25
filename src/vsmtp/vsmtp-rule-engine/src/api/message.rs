@@ -33,6 +33,15 @@ mod message_rhai {
         Ok(vsl_guard_ok!(message.read()).get_header(header).is_some())
     }
 
+    /// Count the number of headers with the given name.
+    #[rhai_fn(global, name = "count_header", return_raw, pure)]
+    pub fn count_header(message: &mut Message, header: &str) -> EngineResult<rhai::INT> {
+        vsl_guard_ok!(message.read())
+            .count_header(header)
+            .try_into()
+            .map_err::<Box<rhai::EvalAltResult>, _>(|_| "header count overflowed".into())
+    }
+
     /// return the value of a header if it exists. Otherwise, returns an empty string.
     #[rhai_fn(global, name = "get_header", return_raw, pure)]
     pub fn get_header(message: &mut Message, header: &str) -> EngineResult<String> {
@@ -147,14 +156,14 @@ mod message_rhai {
 
     /// Remove a header from the raw or parsed email contained in ctx.
     #[rhai_fn(global, name = "remove_header", return_raw, pure)]
-    pub fn remove_header_str(message: &mut Message, header: &str) -> EngineResult<()> {
+    pub fn remove_header_str(message: &mut Message, header: &str) -> EngineResult<bool> {
         super::remove_header(message, header)
     }
 
     /// Remove a header from the raw or parsed email contained in ctx.
     #[allow(clippy::needless_pass_by_value)]
     #[rhai_fn(global, name = "remove_header", return_raw, pure)]
-    pub fn remove_header_obj(message: &mut Message, header: SharedObject) -> EngineResult<()> {
+    pub fn remove_header_obj(message: &mut Message, header: SharedObject) -> EngineResult<bool> {
         super::remove_header(message, &header.to_string())
     }
 }
@@ -208,12 +217,11 @@ where
 }
 
 /// internal generic function to remove a header.
-fn remove_header<T>(message: &mut Message, header: &T) -> EngineResult<()>
+fn remove_header<T>(message: &mut Message, header: &T) -> EngineResult<bool>
 where
     T: AsRef<str> + ?Sized,
 {
-    vsl_guard_ok!(message.write()).remove_header(header.as_ref());
-    Ok(())
+    Ok(vsl_guard_ok!(message.write()).remove_header(header.as_ref()))
 }
 
 #[cfg(test)]

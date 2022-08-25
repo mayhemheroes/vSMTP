@@ -234,6 +234,16 @@ impl Mail {
             .map(|(_, value)| value.as_str())
     }
 
+    /// Count the number of time a header is present.
+    #[must_use]
+    pub fn count_header(&self, name: &str) -> usize {
+        self.headers
+            .0
+            .iter()
+            .filter(|(header, _)| header == name)
+            .count()
+    }
+
     // NOTE: would a double ended queue / linked list interesting in this case ?
     /// prepend new headers to the email.
     pub fn prepend_headers(&mut self, headers: impl IntoIterator<Item = (String, String)>) {

@@ -163,6 +163,14 @@ impl MessageBody {
         )
     }
 
+    /// Count the number of headers with the given name.
+    #[must_use]
+    pub fn count_header(&self, name: &str) -> usize {
+        self.parsed
+            .as_ref()
+            .map_or_else(|| self.raw.count_header(name), |p| p.count_header(name))
+    }
+
     /// rewrite a header with a new value or add it to the header section.
     pub fn set_header(&mut self, name: &str, value: &str) {
         if let Some(parsed) = &mut self.parsed {
@@ -195,12 +203,13 @@ impl MessageBody {
     }
 
     /// Remove a header from the list.
-    pub fn remove_header(&mut self, name: &str) {
+    pub fn remove_header(&mut self, name: &str) -> bool {
         if let Some(parsed) = &mut self.parsed {
+            // NOTE: the result for a parsed email is ignored.
             parsed.remove_header(name);
         }
 
-        self.raw.remove_header(name);
+        self.raw.remove_header(name)
     }
 
     /// # Errors

@@ -92,7 +92,7 @@ impl RawBody {
     #[must_use]
     pub fn get_header(&self, name: &str, with_key: bool, with_multiline: bool) -> Option<String> {
         for (idx, header) in self.headers.iter().enumerate() {
-            if header.starts_with(' ') || header.starts_with('\t') {
+            if header.starts_with(char::is_whitespace) || header.starts_with('\t') {
                 continue;
             }
             let mut split = header.splitn(2, ':');
@@ -101,7 +101,7 @@ impl RawBody {
                     let mut value = value.to_string();
                     for i in self.headers[idx + 1..]
                         .iter()
-                        .take_while(|s| s.starts_with(' ') || s.starts_with('\t'))
+                        .take_while(|s| s.starts_with(char::is_whitespace) || s.starts_with('\t'))
                     {
                         if with_multiline {
                             value.push_str("\r\n");
@@ -120,6 +120,15 @@ impl RawBody {
         }
 
         None
+    }
+
+    /// Count the number of time a header is present.
+    #[must_use]
+    pub fn count_header(&self, name: &str) -> usize {
+        self.headers
+            .iter()
+            .filter(|h| h.starts_with(&format!("{name}:")))
+            .count()
     }
 
     /// Set the value of a header or add it if it does not already exist.
