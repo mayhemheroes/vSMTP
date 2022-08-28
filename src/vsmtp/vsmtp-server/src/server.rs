@@ -15,14 +15,14 @@
  *
 */
 use crate::{
-    auth,
     channel_message::ProcessMessage,
     receiver::{Connection, MailHandler},
+    rsasl_callback::Callback,
 };
 use vsmtp_common::{
     re::{
         anyhow::{self, Context},
-        log, tokio, vsmtp_rsasl,
+        log, tokio,
     },
     CodeID, ConnectionKind,
 };
@@ -33,7 +33,7 @@ use vsmtp_rule_engine::RuleEngine;
 pub struct Server {
     config: std::sync::Arc<Config>,
     tls_config: Option<std::sync::Arc<rustls::ServerConfig>>,
-    rsasl: Option<std::sync::Arc<tokio::sync::Mutex<auth::Backend>>>,
+    rsasl: Option<std::sync::Arc<rsasl::config::SASLConfig>>,
     rule_engine: std::sync::Arc<RuleEngine>,
     resolvers: std::sync::Arc<Resolvers>,
     working_sender: tokio::sync::mpsc::Sender<ProcessMessage>,
@@ -103,6 +103,19 @@ impl Server {
                 None
             },
             rsasl: if config.server.smtp.auth.is_some() {
+                match rsasl::config::SASLConfig::builder()
+                    .with_default_mechanisms()
+                    .with_defaults()
+                    .with_callback(Callback)
+                {
+                    Ok(rsasl) => Some(rsasl),
+                    Err(e) => {
+                        log::error!("Failed to initialize SASL config: {}", e);
+                        None
+                    }
+                }
+
+                /*
                 Some(std::sync::Arc::new(tokio::sync::Mutex::new({
                     let mut rsasl =
                         vsmtp_rsasl::SASL::new().map_err(|e| anyhow::anyhow!("{}", e))?;
@@ -110,6 +123,7 @@ impl Server {
                     rsasl.store(Box::new(config.clone()));
                     rsasl
                 })))
+                */
             } else {
                 None
             },
@@ -279,7 +293,7 @@ impl Server {
     pub async fn run_session(
         mut conn: Connection<tokio::net::TcpStream>,
         tls_config: Option<std::sync::Arc<rustls::ServerConfig>>,
-        rsasl: Option<std::sync::Arc<tokio::sync::Mutex<auth::Backend>>>,
+        rsasl: Option<std::sync::Arc<rsasl::config::SASLConfig>>,
         rule_engine: std::sync::Arc<RuleEngine>,
         resolvers: std::sync::Arc<Resolvers>,
         working_sender: tokio::sync::mpsc::Sender<ProcessMessage>,

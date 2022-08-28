@@ -70,14 +70,7 @@ tracing-journald = "0.3.0"
 syslog = "6.0.1"
 
 [features]
-default = ["vsmtp-common/gsasl_bindgen"]
 tokio_console = ["console-subscriber"]
-
-# TODO: improve that
-[package.metadata.docs.rs]
-features = []
-all-features = false
-no-default-features = true
 
 #
 # DEBIAN PACKAGING

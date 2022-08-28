@@ -32,7 +32,6 @@ use vsmtp_config::{
     Config,
 };
 use vsmtp_rule_engine::RuleEngine;
-use vsmtp_server::auth;
 use vsmtp_server::Connection;
 use vsmtp_server::{ProcessMessage, Server};
 
@@ -213,7 +212,7 @@ async fn test_tls_tunneled(
     expected_output: Vec<String>,
     port: u32,
     get_tls_config: fn(&Config) -> Option<std::sync::Arc<rustls::ServerConfig>>,
-    get_auth_config: fn(&Config) -> Option<std::sync::Arc<tokio::sync::Mutex<auth::Backend>>>,
+    get_auth_config: fn(&Config) -> Option<std::sync::Arc<rsasl::config::SASLConfig>>,
     after_handshake: impl Fn(&tokio_rustls::client::TlsStream<tokio::net::TcpStream>) + 'static + Send,
 ) -> anyhow::Result<(anyhow::Result<()>, anyhow::Result<()>)> {
     let socket_server = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))

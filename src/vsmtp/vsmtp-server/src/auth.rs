@@ -15,8 +15,7 @@
  *
 */
 use vsmtp_common::{
-    auth::Credentials, mail_context::ConnectionContext, re::vsmtp_rsasl, state::StateSMTP,
-    status::Status,
+    auth::Credentials, mail_context::ConnectionContext, re::rsasl, state::StateSMTP, status::Status,
 };
 use vsmtp_config::{Config, Resolvers};
 use vsmtp_rule_engine::{RuleEngine, RuleState};
@@ -27,17 +26,16 @@ type SessionState = (
     ConnectionContext,
 );
 
-/// Backend of SASL implementation
-pub type Backend =
-    vsmtp_rsasl::DiscardOnDrop<vsmtp_rsasl::SASL<std::sync::Arc<Config>, SessionState>>;
-
-/// SASL session data.
-pub type Session = vsmtp_rsasl::Session<SessionState>;
+// /// Backend of SASL implementation
+// pub type Backend = vsmtp_rsasl::SASL<std::sync::Arc<Config>, SessionState>;
+//
+// /// SASL session data.
+// pub type Session = vsmtp_rsasl::Session<SessionState>;
 
 /// Function called by the SASL backend
 pub struct Callback;
 
-impl vsmtp_rsasl::Callback<std::sync::Arc<Config>, SessionState> for Callback {
+impl rsasl::Callback<std::sync::Arc<Config>, SessionState> for Callback {
     fn callback(
         sasl: &mut vsmtp_rsasl::SASL<std::sync::Arc<Config>, SessionState>,
         session: &mut Session,

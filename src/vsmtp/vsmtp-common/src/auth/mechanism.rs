@@ -124,6 +124,7 @@ mod tests {
         }
     }
 
+    /*
     #[test]
     fn supported() {
         let mut rsasl = vsmtp_rsasl::SASL::new_untyped().unwrap();
@@ -147,6 +148,7 @@ mod tests {
             );
         }
     }
+    */
 
     #[test]
     fn error() {

@@ -18,7 +18,6 @@ readme = "../../README.md"
 keywords = ["vsmtp"]
 categories = ["command-line-utilities"]
 
-
 [package.metadata.release]
 pre-release-replacements = [
     { file = "Cargo.toml", search = "vsmtp-common = \\{ path = \"../vsmtp/vsmtp-common\", default-features = false, version = .*", replace = "vsmtp-common = { path = \"../vsmtp/vsmtp-common\", default-features = false, version = \"{{version}}\" }", prerelease = true },
@@ -35,12 +34,3 @@ itertools = "0.10.3"
 
 [dev-dependencies]
 pretty_assertions = "1.2.1"
-
-[features]
-default = ["vsmtp-common/gsasl_bindgen"]
-
-# TODO: improve that
-[package.metadata.docs.rs]
-features = []
-all-features = false
-no-default-features = true

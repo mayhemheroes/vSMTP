@@ -18,7 +18,7 @@ use self::{
     auth_exchange::on_authentication,
     transaction::{Transaction, TransactionResult},
 };
-use crate::{auth, receiver::auth_exchange::AuthExchangeError};
+use crate::receiver::auth_exchange::Error;
 use vsmtp_common::{
     auth::Mechanism,
     mail_context::{ConnectionContext, MAIL_CAPACITY},
@@ -84,7 +84,7 @@ where
     pub async fn receive<M>(
         &mut self,
         tls_config: Option<std::sync::Arc<rustls::ServerConfig>>,
-        rsasl: Option<std::sync::Arc<tokio::sync::Mutex<auth::Backend>>>,
+        rsasl: Option<std::sync::Arc<rsasl::config::SASLConfig>>,
         rule_engine: std::sync::Arc<RuleEngine>,
         resolvers: std::sync::Arc<Resolvers>,
         mail_handler: &mut M,
@@ -166,7 +166,7 @@ where
     #[tracing::instrument(parent = None, skip(rsasl, rule_engine, resolvers, mail_handler))]
     async fn receive_secured<M>(
         &mut self,
-        rsasl: Option<std::sync::Arc<tokio::sync::Mutex<auth::Backend>>>,
+        rsasl: Option<std::sync::Arc<rsasl::config::SASLConfig>>,
         rule_engine: std::sync::Arc<RuleEngine>,
         resolvers: std::sync::Arc<Resolvers>,
         mail_handler: &mut M,
@@ -225,7 +225,7 @@ where
     async fn upgrade_to_secured<M>(
         &mut self,
         tls_config: std::sync::Arc<rustls::ServerConfig>,
-        rsasl: Option<std::sync::Arc<tokio::sync::Mutex<auth::Backend>>>,
+        rsasl: Option<std::sync::Arc<rsasl::config::SASLConfig>>,
         rule_engine: std::sync::Arc<RuleEngine>,
         resolvers: std::sync::Arc<Resolvers>,
         mail_handler: &mut M,
@@ -348,7 +348,7 @@ where
     #[allow(clippy::too_many_arguments)]
     async fn handle_auth(
         &mut self,
-        rsasl: std::sync::Arc<tokio::sync::Mutex<auth::Backend>>,
+        rsasl: std::sync::Arc<rsasl::config::SASLConfig>,
         rule_engine: std::sync::Arc<RuleEngine>,
         resolvers: std::sync::Arc<Resolvers>,
         helo_domain: &mut Option<String>,
@@ -369,11 +369,11 @@ where
             log::warn!("SASL exchange produced an error: {e}");
 
             match e {
-                AuthExchangeError::Failed => {
+                Error::Failed(e) => {
                     self.send_code(CodeID::AuthInvalidCredentials).await?;
                     anyhow::bail!("{}", CodeID::AuthInvalidCredentials)
                 }
-                AuthExchangeError::Canceled => {
+                Error::Canceled => {
                     self.context.authentication_attempt += 1;
                     *helo_domain = Some(helo_pre_auth);
 
@@ -392,11 +392,11 @@ where
                     self.send_code(CodeID::AuthClientCanceled).await?;
                     Ok(())
                 }
-                AuthExchangeError::Timeout(_) => {
+                Error::Timeout(_) => {
                     self.send_code(CodeID::Timeout).await?;
                     anyhow::bail!("{}", CodeID::Timeout)
                 }
-                AuthExchangeError::InvalidBase64 => {
+                Error::InvalidBase64 => {
                     self.send_code(CodeID::AuthErrorDecode64).await?;
                     Ok(())
                 }

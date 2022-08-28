@@ -45,12 +45,3 @@ trust-dns-resolver = { version = "0.21.2", features = [
 ] }
 
 [dev-dependencies]
-
-[features]
-default = ["vsmtp-common/gsasl_bindgen"]
-
-# TODO: improve that
-[package.metadata.docs.rs]
-features = []
-all-features = false
-no-default-features = true

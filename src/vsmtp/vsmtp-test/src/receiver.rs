@@ -22,7 +22,7 @@ use vsmtp_common::{
 use vsmtp_config::Config;
 use vsmtp_mail_parser::MessageBody;
 use vsmtp_rule_engine::RuleEngine;
-use vsmtp_server::{auth, Connection, OnMail};
+use vsmtp_server::{Connection, OnMail};
 
 /// A type implementing Write+Read to emulate sockets
 #[derive(Debug)]
@@ -106,7 +106,7 @@ pub async fn test_receiver_inner<M>(
     smtp_input: &[u8],
     expected_output: &[u8],
     config: std::sync::Arc<Config>,
-    rsasl: Option<std::sync::Arc<tokio::sync::Mutex<auth::Backend>>>,
+    rsasl: Option<std::sync::Arc<rsasl::config::SASLConfig>>,
 ) -> anyhow::Result<()>
 where
     M: OnMail + Send,
@@ -194,7 +194,13 @@ macro_rules! test_receiver {
             $input.as_bytes(),
             $output.as_bytes(),
             std::sync::Arc::new($config),
-            Some(std::sync::Arc::new(tokio::sync::Mutex::new($auth))),
+            Some(
+                rsasl::config::SASLConfig::builder()
+                    .with_default_mechanisms()
+                    .with_defaults()
+                    .with_callback($auth)
+                    .unwrap(),
+            ),
         )
         .await
     };
