@@ -841,8 +841,6 @@ checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
 [[package]]
 name = "gsasl-sys"
 version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd377f206007e661591b4c6a6ba9907a75ae24e2a9ef40f3d0750a1db6bd5dbd"
 dependencies = [
  "bindgen",
 ]
@@ -2830,8 +2828,6 @@ dependencies = [
 [[package]]
 name = "vsmtp-rsasl"
 version = "1.5.1-rc2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2de50011f891b5d5a46e2eb8404cdaac8b2c645300b174f71b81cc65dc9a16a3"
 dependencies = [
  "discard",
  "gsasl-sys",
