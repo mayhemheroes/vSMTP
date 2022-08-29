@@ -180,6 +180,15 @@ impl MessageBody {
         self.raw.set_header(name, value);
     }
 
+    /// Rename a header.
+    pub fn rename_header(&mut self, old: &str, new: &str) {
+        if let Some(parsed) = &mut self.parsed {
+            parsed.rename_header(old, new);
+        }
+
+        self.raw.rename_header(old, new);
+    }
+
     /// push a header to the header section.
     ///
     /// push back

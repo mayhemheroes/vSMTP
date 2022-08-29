@@ -151,6 +151,45 @@ mod message_rhai {
         super::set_header(message, header, &value.to_string())
     }
 
+    /// set a header to the raw or parsed email contained in ctx.
+    #[rhai_fn(global, name = "rename_header", return_raw, pure)]
+    pub fn rename_header_str_str(message: &mut Message, old: &str, new: &str) -> EngineResult<()> {
+        super::rename_header(message, old, new)
+    }
+
+    /// set a header to the raw or parsed email contained in ctx.
+    #[rhai_fn(global, name = "rename_header", return_raw, pure)]
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn rename_header_str_obj(
+        message: &mut Message,
+        old: &str,
+        new: SharedObject,
+    ) -> EngineResult<()> {
+        super::rename_header(message, old, &new.to_string())
+    }
+
+    /// set a header to the raw or parsed email contained in ctx.
+    #[rhai_fn(global, name = "rename_header", return_raw, pure)]
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn rename_header_obj_str(
+        message: &mut Message,
+        old: SharedObject,
+        new: &str,
+    ) -> EngineResult<()> {
+        super::rename_header(message, &old.to_string(), new)
+    }
+
+    /// set a header to the raw or parsed email contained in ctx.
+    #[rhai_fn(global, name = "rename_header", return_raw, pure)]
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn rename_header_obj_obj(
+        message: &mut Message,
+        old: SharedObject,
+        new: SharedObject,
+    ) -> EngineResult<()> {
+        super::rename_header(message, &old.to_string(), &new.to_string())
+    }
+
     /// Get the message body as a string
     #[rhai_fn(global, get = "mail", return_raw, pure)]
     pub fn mail(this: &mut Message) -> EngineResult<String> {
@@ -214,6 +253,16 @@ where
     U: AsRef<str> + ?Sized,
 {
     vsl_guard_ok!(message.write()).set_header(header.as_ref(), value.as_ref());
+    Ok(())
+}
+
+/// internal generic function to rename a header.
+fn rename_header<T, U>(message: &mut Message, old: &T, new: &U) -> EngineResult<()>
+where
+    T: AsRef<str> + ?Sized,
+    U: AsRef<str> + ?Sized,
+{
+    vsl_guard_ok!(message.write()).rename_header(old.as_ref(), new.as_ref());
     Ok(())
 }
 

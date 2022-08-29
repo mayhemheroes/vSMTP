@@ -212,6 +212,19 @@ impl Mail {
         }
     }
 
+    // TODO: should this rename all headers with the same name ?
+    /// Rename a header.
+    pub fn rename_header(&mut self, old: &str, new: &str) {
+        if let Some((old_name, _)) = self
+            .headers
+            .0
+            .iter_mut()
+            .find(|(header, _)| header.to_lowercase() == old.to_lowercase())
+        {
+            *old_name = new.to_string();
+        }
+    }
+
     /// get the value of an header, return None if it does not exists.
     #[must_use]
     pub fn get_header(&self, name: &str) -> Option<&str> {

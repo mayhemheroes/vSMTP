@@ -153,6 +153,20 @@ impl RawBody {
         self.add_header(name, value);
     }
 
+    /// Rename a header.
+    pub fn rename_header(&mut self, old: &str, new: &str) {
+        for header in &mut self.headers {
+            let mut split = header.splitn(2, ": ");
+            match (split.next(), split.next()) {
+                (Some(key), Some(value)) if key == old => {
+                    *header = format!("{new}: {value}");
+                    return;
+                }
+                _ => {}
+            }
+        }
+    }
+
     /// Append a header to the list.
     pub fn add_header(&mut self, name: &str, value: &str) {
         // TODO: handle folding ?
