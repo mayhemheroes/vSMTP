@@ -79,6 +79,30 @@ fn mutate_headers() {
         return deny();
     }
 
+print("passed");
+    prepend_header("X-To-Rename", "Value should not change");
+print("passed");
+
+    if get_header("X-To-Rename") != "Value should not change"
+    {
+        print(`to rename: ${get_header("X-To-Rename")}`);
+        return deny();
+    }
+print("passed");
+
+    rename_header("X-To-Rename", "X-Renamed");
+
+print("passed");
+    if has_header("X-To-Rename")
+    || get_header("X-Renamed") != "Value should not change"
+    {
+        print(`to rename: ${get_header("X-To-Rename")}`);
+        print(`renamed: ${get_header("X-Renamed")}`);
+        return deny();
+    }
+
+    print(get_all_headers());
+
     prepend_header("X-Multi-Header", "1");
     prepend_header("X-Multi-Header", "2");
     prepend_header("X-Multi-Header", "3");

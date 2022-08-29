@@ -244,6 +244,32 @@ fn prepend_header(header, value) { sys::prepend_header(msg(), header, value) }
 /// # Module:Message
 fn set_header(header, value) { sys::set_header(msg(), header, value) }
 
+/// Replace an existing header name by a new value.
+///
+/// # Args
+///
+/// * `old` - the name of the header to rename.
+/// * `new` - the new new of the header.
+///
+/// # Effective smtp stage
+///
+/// All of them, although it is most useful in the `preq` stage because this
+/// is when the email body is received.
+///
+/// # Example
+/// ```js
+/// #{
+///     postq: [
+///         action "rename header" || {
+///             rename_header("X-To-Rename", "X-Renamed");
+///         }
+///     ],
+/// }
+/// ```
+///
+/// # Module:Message
+fn rename_header(o, n) { sys::rename_header(msg(), o, n) }
+
 /// Remove an existing header from the message.
 ///
 /// # Args
