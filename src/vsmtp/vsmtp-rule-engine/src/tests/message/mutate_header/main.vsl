@@ -85,13 +85,17 @@ fn mutate_headers() {
     prepend_header("X-Multi-Header", "4");
     prepend_header("X-Multi-Header", "5");
 
-    if has_header("X-Multi-Header") && count_header("X-Multi-Header") != 5 {
+    if has_header("X-Multi-Header") == false
+    || count_header("X-Multi-Header") != 5
+    || get_all_headers("X-Multi-Header") != [" 5", " 4", " 3", " 2", " 1"] {
         return deny();
     }
 
     while remove_header("X-Multi-Header") {}
     remove_header("X-Another-Header");
     remove_header(status);
+
+    print(get_all_headers());
 
     if !has_header("X-Another-Header")
     && !has_header("X-Multi-Header")

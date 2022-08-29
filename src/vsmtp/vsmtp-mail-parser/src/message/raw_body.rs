@@ -88,6 +88,12 @@ impl RawBody {
         out
     }
 
+    /// Get all headers without parsing.
+    #[must_use]
+    pub const fn raw_headers(&self) -> &Vec<String> {
+        &self.headers
+    }
+
     /// Search for a header and return its value.
     #[must_use]
     pub fn get_header(&self, name: &str, with_key: bool, with_multiline: bool) -> Option<String> {

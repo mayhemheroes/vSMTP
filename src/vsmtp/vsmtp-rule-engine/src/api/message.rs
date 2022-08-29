@@ -44,45 +44,48 @@ mod message_rhai {
 
     /// return the value of a header if it exists. Otherwise, returns an empty string.
     #[rhai_fn(global, name = "get_header", return_raw, pure)]
-    pub fn get_header(message: &mut Message, header: &str) -> EngineResult<String> {
+    pub fn get_header_str(message: &mut Message, header: &str) -> EngineResult<String> {
         Ok(vsl_guard_ok!(message.read())
             .get_header(header)
+            .unwrap_or_default())
+    }
+
+    /// return the value of a header if it exists. Otherwise, returns an empty string.
+    #[allow(clippy::needless_pass_by_value)]
+    #[rhai_fn(global, name = "get_header", return_raw, pure)]
+    pub fn get_header_obj(message: &mut Message, header: SharedObject) -> EngineResult<String> {
+        Ok(vsl_guard_ok!(message.read())
+            .get_header(&header.to_string())
             .unwrap_or_default())
     }
 
     /// Return a list of headers bearing the `name` given as argument.
     /// The `count` parameter specify the number of headers with the same name
     /// to return.
-    #[rhai_fn(global, name = "get_headers", return_raw, pure)]
-    pub fn get_headers_str(
-        message: &mut Message,
-        name: &str,
-        count: rhai::INT,
-    ) -> EngineResult<rhai::Dynamic> {
-        super::get_headers(
-            message,
-            name,
-            usize::try_from(count)
-                .map_err::<Box<rhai::EvalAltResult>, _>(|e| e.to_string().into())?,
-        )
+    #[rhai_fn(global, name = "get_all_headers", return_raw, pure)]
+    pub fn get_all_headers(message: &mut Message) -> EngineResult<rhai::Array> {
+        Ok(vsl_guard_ok!(message.read())
+            .inner()
+            .raw_headers()
+            .iter()
+            .map(|raw| rhai::Dynamic::from(raw.clone()))
+            .collect())
     }
 
     /// Return a list of headers bearing the `name` given as argument.
-    /// The `count` parameter specify the number of headers with the same name
-    /// to return.
+    #[rhai_fn(global, name = "get_all_headers", return_raw, pure)]
+    pub fn get_all_headers_str(message: &mut Message, name: &str) -> EngineResult<rhai::Array> {
+        super::get_all_headers(message, name)
+    }
+
+    /// Return a list of headers bearing the `name` given as argument.
     #[allow(clippy::needless_pass_by_value)]
-    #[rhai_fn(global, name = "get_headers", return_raw, pure)]
-    pub fn get_headers_obj(
+    #[rhai_fn(global, name = "get_all_headers", return_raw, pure)]
+    pub fn get_all_headers_obj(
         message: &mut Message,
         name: SharedObject,
-        count: rhai::INT,
-    ) -> EngineResult<rhai::Dynamic> {
-        super::get_headers(
-            message,
-            &name.to_string(),
-            usize::try_from(count)
-                .map_err::<Box<rhai::EvalAltResult>, _>(|e| e.to_string().into())?,
-        )
+    ) -> EngineResult<rhai::Array> {
+        super::get_all_headers(message, &name.to_string())
     }
 
     /// add a header to the end of the raw or parsed email contained in ctx.
@@ -171,19 +174,17 @@ mod message_rhai {
 /// Return a list of headers bearing the `name` given as argument.
 /// The `count` parameter specify the number of headers with the same name
 /// to return.
-fn get_headers(this: &mut Message, name: &str, count: usize) -> EngineResult<rhai::Dynamic> {
+fn get_all_headers(this: &mut Message, name: &str) -> EngineResult<rhai::Array> {
     let guard = vsl_guard_ok!(this.read());
     let name_lowercase = name.to_lowercase();
 
     Ok(guard
         .inner()
         .headers(true)
-        .iter()
+        .into_iter()
         .filter(|(key, _)| key.to_lowercase() == name_lowercase)
-        .take(count)
-        .map(|(key, value)| format!("{key}:{value}"))
-        .collect::<Vec<_>>()
-        .into())
+        .map(|(_, value)| rhai::Dynamic::from(value))
+        .collect())
 }
 
 /// internal generic function to append a header to the message.
@@ -260,9 +261,15 @@ mod test {
         )
         .unwrap();
 
-        assert_eq!(get_header(&mut message, "X-HEADER-1").unwrap(), "VALUE-1");
-        assert_eq!(get_header(&mut message, "X-HEADER-2").unwrap(), "VALUE-2");
-        assert_eq!(get_header(&mut message, "X-HEADER-3").unwrap(), "");
+        assert_eq!(
+            get_header_str(&mut message, "X-HEADER-1").unwrap(),
+            "VALUE-1"
+        );
+        assert_eq!(
+            get_header_str(&mut message, "X-HEADER-2").unwrap(),
+            "VALUE-2"
+        );
+        assert_eq!(get_header_str(&mut message, "X-HEADER-3").unwrap(), "");
     }
 
     #[test]

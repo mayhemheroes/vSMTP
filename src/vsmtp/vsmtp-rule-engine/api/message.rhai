@@ -75,6 +75,60 @@ fn has_header(header) { sys::has_header(msg(), header) }
 /// # Module:Message
 fn get_header(header) { sys::get_header(msg(), header) }
 
+/// Get a list of all headers.
+///
+/// # Return
+///
+/// * `array` - all of the headers found in the message.
+///
+/// # Effective smtp stage
+///
+/// All of them, although it is most useful in the `preq` stage because this
+/// is when the email body is received.
+///
+/// # Example
+/// ```js
+/// #{
+///     postq: [
+///         action "log display headers" || {
+///             log("trace", `${get_all_headers()}`);
+///         }
+///     ],
+/// }
+/// ```
+///
+/// # Module:Message
+fn get_all_headers() { sys::get_all_headers(msg()) }
+
+/// Get a list of all values of a specific header from the incoming message.
+///
+/// # Args
+///
+/// * `header` - the name of the header to search.
+///
+/// # Return
+///
+/// * `array` - all header values, or an empty array if the header was not found.
+///
+/// # Effective smtp stage
+///
+/// All of them, although it is most useful in the `preq` stage because this
+/// is when the email body is received.
+///
+/// # Example
+/// ```js
+/// #{
+///     postq: [
+///         action "display return path" || {
+///             print(get_all_headers("Return-Path"));
+///         }
+///     ],
+/// }
+/// ```
+///
+/// # Module:Message
+fn get_all_headers(header) { sys::get_all_headers(msg(), header) }
+
 /// Count the number of headers with the given name.
 ///
 /// # Args
