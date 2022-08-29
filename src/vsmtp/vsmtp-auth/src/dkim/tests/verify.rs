@@ -43,7 +43,9 @@ async fn verify(mail: &str) {
 
     let public_key = <PublicKey as std::str::FromStr>::from_str(&field.to_string()).unwrap();
 
-    signature.verify(body.inner(), &public_key).unwrap();
+    signature
+        .verify(body.inner(), &public_key)
+        .expect("missmatch");
 }
 
 fn verify_3rd_party(filepath: &str) {
