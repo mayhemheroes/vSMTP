@@ -1,0 +1,7 @@
+project: vSMTP
+target: rules
+
+cmds:
+  - cmd: /rules
+  - cmd: /rules_no_inst @@
+    libfuzzer: false
