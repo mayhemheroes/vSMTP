@@ -17,7 +17,7 @@
 use crate::{rule_engine::RuleEngine, rule_state::RuleState, tests::helpers::get_default_state};
 use vsmtp_common::{
     mail_context::{ConnectionContext, MailContext, MessageMetadata},
-    state::StateSMTP,
+    state::State,
     status::Status,
     CodeID, Envelop, ReplyOrCodeID,
 };
@@ -26,22 +26,22 @@ use vsmtp_mail_parser::MessageBody;
 #[test]
 fn test_engine_errors() {
     let re = RuleEngine::new(
-        &vsmtp_config::Config::default(),
-        &Some(rules_path!["error_handling", "main.vsl"]),
+        std::sync::Arc::new(vsmtp_config::Config::default()),
+        Some(rules_path!["error_handling", "main.vsl"]),
     )
     .unwrap();
     let (mut state, _) = get_default_state("./tmp/app");
 
     assert_eq!(
-        re.run_when(&mut state, &StateSMTP::Connect),
+        re.run_when(&mut state, State::Connect),
         Status::Deny(ReplyOrCodeID::Left(CodeID::Denied))
     );
     assert_eq!(
-        re.run_when(&mut state, &StateSMTP::Helo),
+        re.run_when(&mut state, State::Helo),
         Status::Deny(ReplyOrCodeID::Left(CodeID::Denied))
     );
     assert_eq!(
-        re.run_when(&mut state, &StateSMTP::MailFrom),
+        re.run_when(&mut state, State::MailFrom),
         Status::Deny(ReplyOrCodeID::Left(CodeID::Denied))
     );
 }
@@ -51,26 +51,26 @@ fn test_engine_errors() {
 // TODO: module errors are parsed at compile time now.
 fn test_engine_rules_syntax() {
     let re = RuleEngine::new(
-        &vsmtp_config::Config::default(),
-        &Some(rules_path!["syntax", "main.vsl"]),
+        std::sync::Arc::new(vsmtp_config::Config::default()),
+        Some(rules_path!["syntax", "main.vsl"]),
     )
     .unwrap();
     let (mut state, _) = get_default_state("./tmp/app");
 
     assert_eq!(
-        re.run_when(&mut state, &StateSMTP::Connect),
+        re.run_when(&mut state, State::Connect),
         Status::Accept(ReplyOrCodeID::Left(CodeID::Ok)),
     );
-    assert_eq!(re.run_when(&mut state, &StateSMTP::Helo), Status::Next);
-    assert_eq!(re.run_when(&mut state, &StateSMTP::MailFrom), Status::Next);
-    assert_eq!(re.run_when(&mut state, &StateSMTP::RcptTo), Status::Next);
-    assert_eq!(re.run_when(&mut state, &StateSMTP::PreQ), Status::Next);
-    assert_eq!(re.run_when(&mut state, &StateSMTP::PostQ), Status::Next);
+    assert_eq!(re.run_when(&mut state, State::Helo), Status::Next);
+    assert_eq!(re.run_when(&mut state, State::MailFrom), Status::Next);
+    assert_eq!(re.run_when(&mut state, State::RcptTo), Status::Next);
+    assert_eq!(re.run_when(&mut state, State::PreQ), Status::Next);
+    assert_eq!(re.run_when(&mut state, State::PostQ), Status::Next);
 }
 
 #[test]
 fn test_rule_state() {
-    let config = vsmtp_config::Config::builder()
+    let mut config = vsmtp_config::Config::builder()
         .with_version_str("<1.0.0")
         .unwrap()
         .with_server_name_and_client_count("testserver.com", 32)
@@ -78,7 +78,7 @@ fn test_rule_state() {
         .unwrap()
         .with_ipv4_localhost()
         .with_default_logs_settings()
-        .with_spool_dir_and_default_queues("./tmp/delivery")
+        .with_spool_dir_and_default_queues("./tmp/spool")
         .without_tls_support()
         .with_default_smtp_options()
         .with_default_smtp_error_handler()
@@ -92,12 +92,27 @@ fn test_rule_state() {
         .validate()
         .unwrap();
 
-    let rule_engine = RuleEngine::from_script(&config, "#{}").unwrap();
+    config.server.queues.dirpath = "./tmp/spool".into();
+    config.app.dirpath = "./tmp/app".into();
+
+    let config = std::sync::Arc::new(config);
+
+    let rule_engine = RuleEngine::from_script(config.clone(), "#{}").unwrap();
     let resolvers = std::sync::Arc::new(std::collections::HashMap::new());
-    let state = RuleState::new(&config, resolvers.clone(), &rule_engine);
+
+    let queue_manager =
+        <vqueue::fs::QueueManager as vqueue::GenericQueueManager>::init(config.clone()).unwrap();
+
+    let state = RuleState::new(
+        config.clone(),
+        resolvers.clone(),
+        queue_manager.clone(),
+        &rule_engine,
+    );
     let state_with_context = RuleState::with_context(
-        &config,
+        config,
         resolvers,
+        queue_manager,
         &rule_engine,
         MailContext {
             connection: ConnectionContext {

@@ -14,7 +14,7 @@
  * this program. If not, see https://www.gnu.org/licenses/.
  *
 */
-use vsmtp_common::{auth::Mechanism, re::strum};
+use vsmtp_common::auth::Mechanism;
 use vsmtp_config::Config;
 
 pub fn safe_auth_config() -> Config {
@@ -26,13 +26,13 @@ pub fn safe_auth_config() -> Config {
         .unwrap()
         .with_ipv4_localhost()
         .with_default_logs_settings()
-        .with_spool_dir_and_default_queues("./tmp/delivery")
+        .with_spool_dir_and_default_queues("./tmp/spool")
         .without_tls_support()
         .with_default_smtp_options()
         .with_default_smtp_error_handler()
         .with_default_smtp_codes()
         .with_safe_auth(false, -1)
-        .with_default_app()
+        .with_app_at_location("./tmp/app")
         .with_vsl("./src/tests/empty_main.vsl")
         .with_default_app_logs()
         .with_system_dns()
@@ -50,7 +50,7 @@ pub fn unsafe_auth_config() -> Config {
         .unwrap()
         .with_ipv4_localhost()
         .with_default_logs_settings()
-        .with_spool_dir_and_default_queues("./tmp/delivery")
+        .with_spool_dir_and_default_queues("./tmp/spool")
         .without_tls_support()
         .with_default_smtp_options()
         .with_default_smtp_error_handler()
@@ -58,10 +58,15 @@ pub fn unsafe_auth_config() -> Config {
         .with_auth(
             false,
             true,
-            <Mechanism as strum::IntoEnumIterator>::iter().collect::<Vec<_>>(),
+            vec![
+                Mechanism::Plain,
+                Mechanism::Login,
+                Mechanism::CramMd5,
+                Mechanism::Anonymous,
+            ],
             -1,
         )
-        .with_default_app()
+        .with_app_at_location("./tmp/app")
         .with_vsl("./src/tests/auth.vsl")
         .with_default_app_logs()
         .with_system_dns()

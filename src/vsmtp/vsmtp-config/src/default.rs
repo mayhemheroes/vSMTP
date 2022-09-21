@@ -23,15 +23,32 @@ use crate::{
         FieldServerSystemThreadPool, FieldServerTls, FieldServerVirtualTls, ResolverOptsWrapper,
         TlsSecurityLevel,
     },
-    field::SyslogSocket,
+    field::{SyslogFormat, SyslogSocket},
     Config,
 };
-use vsmtp_common::{auth::Mechanism, collection, re::strum, CodeID, Reply, ReplyCode};
+use vsmtp_common::{auth::Mechanism, collection, CodeID, Reply, ReplyCode};
 
 impl Default for Config {
     fn default() -> Self {
+        let current_version =
+            semver::Version::parse(env!("CARGO_PKG_VERSION")).expect("valid semver");
         Self::ensure(Self {
-            version_requirement: semver::VersionReq::parse(">=1.0.0, <2.0.0").unwrap(),
+            version_requirement: semver::VersionReq::from_iter([
+                semver::Comparator {
+                    op: semver::Op::GreaterEq,
+                    major: current_version.major,
+                    minor: Some(current_version.minor),
+                    patch: Some(current_version.patch),
+                    pre: semver::Prerelease::EMPTY,
+                },
+                semver::Comparator {
+                    op: semver::Op::Less,
+                    major: current_version.major + 1,
+                    minor: Some(0),
+                    patch: Some(0),
+                    pre: semver::Prerelease::EMPTY,
+                },
+            ]),
             server: FieldServer::default(),
             app: FieldApp::default(),
         })
@@ -44,6 +61,7 @@ impl Default for FieldServer {
         Self {
             domain: Self::hostname(),
             client_count_max: Self::default_client_count_max(),
+            message_size_limit: Self::default_message_size_limit(),
             system: FieldServerSystem::default(),
             interfaces: FieldServerInterfaces::default(),
             logs: FieldServerLogs::default(),
@@ -64,6 +82,10 @@ impl FieldServer {
 
     pub(crate) const fn default_client_count_max() -> i64 {
         16
+    }
+
+    pub(crate) const fn default_message_size_limit() -> usize {
+        10_000_000
     }
 }
 
@@ -161,6 +183,12 @@ impl FieldServerLogs {
     }
 }
 
+impl Default for SyslogFormat {
+    fn default() -> Self {
+        Self::Rfc5424
+    }
+}
+
 impl SyslogSocket {
     pub(crate) fn default_udp_local() -> std::net::SocketAddr {
         "127.0.0.1:0".parse().expect("valid")
@@ -173,9 +201,11 @@ impl SyslogSocket {
     pub(crate) fn default_tcp_server() -> std::net::SocketAddr {
         "127.0.0.1:601".parse().expect("valid")
     }
+}
 
-    pub(crate) fn default_unix_path() -> std::path::PathBuf {
-        "/var/run/syslog".into()
+impl Default for SyslogSocket {
+    fn default() -> Self {
+        Self::Unix { path: None }
     }
 }
 
@@ -370,6 +400,9 @@ impl FieldServerSMTP {
             ),
             CodeID::BadSequence => Reply::new(
                 ReplyCode::Code{ code: 503 }, "Bad sequence of commands"
+            ),
+            CodeID::MessageSizeExceeded => Reply::new(
+                ReplyCode::Enhanced { code: 552, enhanced: "4.3.1".to_string() }, "Message size exceeds fixed maximum message size"
             ),
             CodeID::TlsGoAhead => Reply::new(
                 ReplyCode::Code{ code: 220 }, "TLS go ahead"

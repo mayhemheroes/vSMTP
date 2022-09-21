@@ -46,6 +46,7 @@
 #![deny(missing_docs)]
 #![forbid(unsafe_code)]
 //
+#![warn(rust_2018_idioms)]
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
@@ -57,7 +58,6 @@
 mod tests;
 
 mod parser {
-    pub mod semver;
     pub mod socket_addr;
     pub mod syst_group;
     pub mod syst_user;
@@ -87,21 +87,10 @@ mod virtual_tls;
 
 pub use config::{field, Config};
 
-// pub use log4rs_helper::get_log4rs_config;
 pub use rustls_helper::get_rustls_config;
 pub use trust_dns_helper::{build_resolvers, Resolvers};
 
-/// Re-exported dependencies
-pub mod re {
-    pub use humantime_serde::re::humantime;
-    pub use rustls;
-    // NOTE: this one should not be re-exported (because tests only)
-    pub use rustls_pemfile;
-    pub use users;
-}
-
 use builder::{Builder, WantsVersion};
-use vsmtp_common::{libc_abstraction::chown, re::anyhow};
 
 impl Config {
     /// Create an instance of [`Builder`].
@@ -130,21 +119,15 @@ impl Config {
     pub fn from_toml(input: &str) -> anyhow::Result<Self> {
         #[derive(serde::Serialize, serde::Deserialize)]
         struct VersionRequirement {
-            #[serde(
-                serialize_with = "crate::parser::semver::serialize",
-                deserialize_with = "crate::parser::semver::deserialize"
-            )]
             version_requirement: semver::VersionReq,
         }
 
-        let req = toml::from_str::<VersionRequirement>(input)?;
+        let version_requirement = toml::from_str::<VersionRequirement>(input)?.version_requirement;
         let pkg_version = semver::Version::parse(env!("CARGO_PKG_VERSION"))?;
 
-        if !req.version_requirement.matches(&pkg_version) {
+        if !version_requirement.matches(&pkg_version) {
             anyhow::bail!(
-                "Version requirement not fulfilled: expected '{}' but got '{}'",
-                req.version_requirement,
-                env!("CARGO_PKG_VERSION")
+                "Version requirement not fulfilled: expected '{version_requirement}' but got '{pkg_version}'"
             );
         }
 
@@ -154,6 +137,7 @@ impl Config {
     }
 }
 
+/*
 #[doc(hidden)]
 pub fn create_app_folder(
     config: &Config,
@@ -191,3 +175,4 @@ pub fn create_app_folder(
 
     Ok(full_path)
 }
+*/

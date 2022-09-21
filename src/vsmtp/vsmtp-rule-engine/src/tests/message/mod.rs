@@ -20,19 +20,24 @@ use crate::{
     tests::helpers::{get_default_config, get_default_state},
 };
 use vsmtp_common::{
-    addr, mail_context::MessageMetadata, state::StateSMTP, status::Status, CodeID, ReplyOrCodeID,
+    addr, mail_context::MessageMetadata, state::State, status::Status, CodeID, ReplyOrCodeID,
 };
 use vsmtp_mail_parser::{BodyType, Mail, MailHeaders, MailMimeParser, MessageBody};
 
 #[test]
 fn test_email_context_empty() {
     let config = get_default_config("./tmp/app");
-    let re = RuleEngine::new(&config, &Some(rules_path!["main.vsl"])).unwrap();
+    let config = std::sync::Arc::new(config);
+    let re = RuleEngine::new(config.clone(), Some(rules_path!["main.vsl"])).unwrap();
+
     let resolvers = std::sync::Arc::new(std::collections::HashMap::new());
-    let mut state = RuleState::new(&config, resolvers, &re);
+    let queue_manager =
+        <vqueue::fs::QueueManager as vqueue::GenericQueueManager>::init(config.clone()).unwrap();
+
+    let mut state = RuleState::new(config, resolvers, queue_manager, &re);
 
     assert_eq!(
-        re.run_when(&mut state, &StateSMTP::Connect),
+        re.run_when(&mut state, State::Connect),
         Status::Accept(ReplyOrCodeID::Left(CodeID::Ok)),
     );
 }
@@ -40,9 +45,12 @@ fn test_email_context_empty() {
 #[test]
 fn test_email_context_raw() {
     let config = get_default_config("./tmp/app");
-    let re = RuleEngine::new(&config, &Some(rules_path!["main.vsl"])).unwrap();
+    let config = std::sync::Arc::new(config);
+    let re = RuleEngine::new(config.clone(), Some(rules_path!["main.vsl"])).unwrap();
     let resolvers = std::sync::Arc::new(std::collections::HashMap::new());
-    let mut state = RuleState::new(&config, resolvers, &re);
+    let queue_manager =
+        <vqueue::fs::QueueManager as vqueue::GenericQueueManager>::init(config.clone()).unwrap();
+    let mut state = RuleState::new(config, resolvers, queue_manager, &re);
 
     *state.message().write().unwrap() = MessageBody::try_from(concat!(
         "from: <foo@bar>\r\n",
@@ -51,7 +59,7 @@ fn test_email_context_raw() {
     ))
     .unwrap();
     assert_eq!(
-        re.run_when(&mut state, &StateSMTP::PreQ),
+        re.run_when(&mut state, State::PreQ),
         Status::Accept(ReplyOrCodeID::Left(CodeID::Ok)),
     );
 }
@@ -59,9 +67,12 @@ fn test_email_context_raw() {
 #[test]
 fn test_email_context_mail() {
     let config = get_default_config("./tmp/app");
-    let re = RuleEngine::new(&config, &Some(rules_path!["main.vsl"])).unwrap();
+    let config = std::sync::Arc::new(config);
+    let re = RuleEngine::new(config.clone(), Some(rules_path!["main.vsl"])).unwrap();
     let resolvers = std::sync::Arc::new(std::collections::HashMap::new());
-    let mut state = RuleState::new(&config, resolvers, &re);
+    let queue_manager =
+        <vqueue::fs::QueueManager as vqueue::GenericQueueManager>::init(config.clone()).unwrap();
+    let mut state = RuleState::new(config, resolvers, queue_manager, &re);
 
     {
         *state.message().write().unwrap() = MessageBody::try_from(concat!(
@@ -106,7 +117,7 @@ fn test_email_context_mail() {
     }
 
     assert_eq!(
-        re.run_when(&mut state, &StateSMTP::PostQ),
+        re.run_when(&mut state, State::PostQ),
         Status::Accept(ReplyOrCodeID::Left(CodeID::Ok)),
     );
     assert_eq!(
@@ -118,12 +129,16 @@ fn test_email_context_mail() {
 #[test]
 fn test_email_bcc() {
     let config = get_default_config("./tmp/app");
-    let re = RuleEngine::new(&config, &Some(rules_path!["bcc", "main.vsl"])).unwrap();
+    let config = std::sync::Arc::new(config);
+    let re = RuleEngine::new(config.clone(), Some(rules_path!["bcc", "main.vsl"])).unwrap();
     let resolvers = std::sync::Arc::new(std::collections::HashMap::new());
-    let mut state = RuleState::new(&config, resolvers, &re);
+    let queue_manager =
+        <vqueue::fs::QueueManager as vqueue::GenericQueueManager>::init(config.clone()).unwrap();
+
+    let mut state = RuleState::new(config, resolvers, queue_manager, &re);
 
     assert_eq!(
-        re.run_when(&mut state, &StateSMTP::PostQ),
+        re.run_when(&mut state, State::PostQ),
         Status::Accept(ReplyOrCodeID::Left(CodeID::Ok)),
     );
 }
@@ -131,18 +146,26 @@ fn test_email_bcc() {
 #[test]
 fn test_email_add_get_set_header() {
     let config = get_default_config("./tmp/app");
-    let re = RuleEngine::new(&config, &Some(rules_path!["mutate_header", "main.vsl"])).unwrap();
-    let resolvers = std::sync::Arc::new(std::collections::HashMap::new());
+    let config = std::sync::Arc::new(config);
 
-    let mut state = RuleState::new(&config, resolvers, &re);
+    let re = RuleEngine::new(
+        config.clone(),
+        Some(rules_path!["mutate_header", "main.vsl"]),
+    )
+    .unwrap();
+    let resolvers = std::sync::Arc::new(std::collections::HashMap::new());
+    let queue_manager =
+        <vqueue::fs::QueueManager as vqueue::GenericQueueManager>::init(config.clone()).unwrap();
+
+    let mut state = RuleState::new(config, resolvers, queue_manager, &re);
     assert_eq!(
-        re.run_when(&mut state, &StateSMTP::Connect),
+        re.run_when(&mut state, State::Connect),
         Status::Accept(ReplyOrCodeID::Left(CodeID::Ok))
     );
 
     let (mut state, _) = get_default_state("./tmp/app");
     *state.message().write().unwrap() = MessageBody::default();
-    let status = re.run_when(&mut state, &StateSMTP::PreQ);
+    let status = re.run_when(&mut state, State::PreQ);
     assert_eq!(status, Status::Accept(ReplyOrCodeID::Left(CodeID::Ok)));
 
     *state.message().write().unwrap() = MessageBody::default();
@@ -155,7 +178,7 @@ fn test_email_add_get_set_header() {
         dkim: None,
     };
     assert_eq!(
-        re.run_when(&mut state, &StateSMTP::PostQ),
+        re.run_when(&mut state, State::PostQ),
         Status::Accept(ReplyOrCodeID::Left(CodeID::Ok)),
     );
 }

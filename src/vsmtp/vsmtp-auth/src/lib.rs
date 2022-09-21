@@ -19,10 +19,13 @@
  *
 */
 
+#![cfg_attr(docsrs, feature(doc_cfg))]
+//
 #![doc(html_no_source)]
 #![deny(missing_docs)]
 #![forbid(unsafe_code)]
 //
+#![warn(rust_2018_idioms)]
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::nursery)]
@@ -44,7 +47,7 @@
 /// ```
 pub mod spf;
 
-/// The implementation follow the RFC 6376
+/// The implementation follow the RFC 6376 & 8301
 ///
 /// ```txt
 /// DomainKeys Identified Mail (DKIM) permits a person, role, or
@@ -71,6 +74,38 @@ pub mod dkim;
 /// organization can use to improve mail handling.
 /// ```
 pub mod dmarc;
+
+///
+#[must_use]
+#[derive(Debug, thiserror::Error)]
+pub enum ParseError {
+    ///
+    #[error("missing required field: `{field}`")]
+    MissingRequiredField {
+        ///
+        field: String,
+    },
+    ///
+    #[error("syntax error: `{reason}`")]
+    SyntaxError {
+        ///
+        reason: String,
+    },
+    ///
+    #[error("invalid argument: `{reason}`")]
+    InvalidArgument {
+        ///
+        reason: String,
+    },
+}
+
+impl Default for ParseError {
+    fn default() -> Self {
+        ParseError::InvalidArgument {
+            reason: "`default` invoked".to_string(),
+        }
+    }
+}
 
 /// Return the root of a domain
 ///

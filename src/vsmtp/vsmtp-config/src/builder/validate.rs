@@ -23,7 +23,6 @@ use crate::{
     },
     Config,
 };
-use vsmtp_common::re::anyhow;
 
 impl Builder<WantsValidate> {
     ///
@@ -54,6 +53,7 @@ impl Builder<WantsValidate> {
             server: FieldServer {
                 domain: srv.domain,
                 client_count_max: srv.client_count_max,
+                message_size_limit: srv.message_size_limit,
                 system: FieldServerSystem {
                     user: srv_syst.user,
                     group: srv_syst.group,

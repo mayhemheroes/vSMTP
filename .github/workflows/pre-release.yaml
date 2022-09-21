@@ -6,10 +6,7 @@ on:
 
 jobs:
   check-release:
-    strategy:
-      matrix:
-        os: [ubuntu-20.04, ubuntu-22.04]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - name: Get bump method
         id: get-bump-method
@@ -17,6 +14,8 @@ jobs:
           echo ${{ github.event.pull_request.labels.*.name }}
           if ${{ contains(github.event.pull_request.labels.*.name, 'B-candidate') }}; then
             echo '::set-output name=BUMP::rc'
+          elif ${{ contains(github.event.pull_request.labels.*.name, 'B-release') }}; then
+            echo '::set-output name=BUMP::release'
           elif ${{ contains(github.event.pull_request.labels.*.name, 'B-patch') }}; then
             echo '::set-output name=BUMP::patch'
           elif ${{ contains(github.event.pull_request.labels.*.name, 'B-minor') }}; then
@@ -29,17 +28,7 @@ jobs:
       - run: echo ${{ steps.get-bump-method.outputs.BUMP }}
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Install gsasl
-        run: sudo apt-get update && sudo apt-get install -y gsasl libgsasl7-dev
-      - uses: actions/cache@v1
-        with:
-          path: |
-            ~/.cargo/bin
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db/
-            ./target
-          key: "${{ runner.os }}-cargo-build-stable-${{ hashFiles('**/Cargo.lock') }}"
+      - uses: Swatinem/rust-cache@v2
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -55,16 +44,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Install gsasl
-        run: sudo apt-get update && sudo apt-get install -y gsasl libgsasl7-dev lintian
-      - uses: actions/cache@v1
-        with:
-          path: |
-            ~/.cargo/bin
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db/
-          key: "${{ runner.os }}-cargo-build-stable-${{ hashFiles('**/Cargo.lock') }}"
+      - name: Install lintian
+        run: sudo apt-get update && sudo apt-get install -y lintian
+      - uses: Swatinem/rust-cache@v2
       - run: |
           git clone https://github.com/viridIT/cargo-deb.git
           cd cargo-deb

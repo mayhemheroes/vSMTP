@@ -17,10 +17,7 @@
 
 pub mod parsing;
 use crate::api::SharedObject;
-use vsmtp_common::{
-    re::{addr, anyhow, log, strum},
-    Address, Reply, ReplyCode,
-};
+use vsmtp_common::{Address, Reply, ReplyCode};
 
 const FILE_CAPACITY: usize = 20;
 
@@ -57,6 +54,17 @@ pub enum Object {
 }
 
 impl Object {
+    /// Create a new address.
+    ///
+    /// # Errors
+    ///
+    /// * Failed to parse the email address.
+    pub fn new_address(addr: &str) -> anyhow::Result<Self> {
+        Ok(Self::Address(<Address as std::str::FromStr>::from_str(
+            addr,
+        )?))
+    }
+
     /// get a specific value from a rhai map and convert it to a specific type.
     /// returns an error if the cast failed.
     pub(crate) fn value<S, T>(
@@ -125,9 +133,7 @@ impl Object {
 
             "address" => {
                 let value = Self::value::<S, String>(map, "value")?;
-                Ok(Self::Address(<Address as std::str::FromStr>::from_str(
-                    &value,
-                )?))
+                Self::new_address(&value)
             }
 
             "identifier" => Ok(Self::Identifier(Self::value::<S, String>(map, "value")?)),
@@ -175,7 +181,9 @@ impl Object {
                             )),
                             _ => {}
                         },
-                        Err(error) => log::error!("couldn't read line in '{}': {}", path, error),
+                        Err(error) => {
+                            tracing::error!(?path, %error, "Could not read line in file.");
+                        }
                     };
                 }
 
@@ -436,9 +444,9 @@ mod test {
         //     ]))
         //     .unwrap(),
         //     Object::File(vec![
-        //         Object::Address(addr!("foo@bar.net")),
-        //         Object::Address(addr!("nested@address.com")),
-        //         Object::Address(addr!("john@doe.com"))
+        //         Object::Address(new_addr!("foo@bar.net")),
+        //         Object::Address(new_addr!("nested@address.com")),
+        //         Object::Address(new_addr!("john@doe.com"))
         //     ])
         // );
 

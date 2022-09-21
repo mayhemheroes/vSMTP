@@ -1,8 +1,50 @@
 # Changelog
 
+All notable changes are documented or linked to in this file. The format of the changelog is based on
+['Keep a Changelog'](https://keepachangelog.com/en/1.0.0/). In short, this changelog is sorted the most recent
+release at the top, and the first section documents features that are in the `development`
+branch but have not yet landed in the `main` branch from which releases are generated.
+
+The MSRV (minimum supported Rust version) of the project is documented in the [`Cargo.toml`](Cargo.toml) and in the
+[README](README.md). Changes to the MSRV are considered a **non-breaking change** and thus can happen in a *MINOR*
+release. They will however *never* happen in a patch release.
+
 <!-- next-header -->
 
 ## [Unreleased] - ReleaseDate
+
+### Added
+* `--stdout` flag, print logs to stdout. (#579)
+* Message size limit configuration. (#580)
+
+### Changed
+* BREAKING: MSRV bumped to 1.62.1 (#601)
+* `--no-daemon` flag do not print logs to the standard output anymore. (#579)
+* Refactorization of services parsing. (#576)
+* `vsmtp` & `vqueue` `--version` flag display build commit. (#585)
+* `vqueue` display error if no subcommands are specified. (#585)
+* Updated logs to communicate better the state of vSMTP. (#587)
+
+## [1.3.0] - 2022-09-07
+
+### Added
+
+* support for `MySQL` databases. see [`/examples/greylist/mysql`](https://github.com/viridIT/vSMTP/tree/develop/examples/greylist/mysql). (#548)
+
+### Changed
+
+* update the backend of the `SASL` protocol, using a state-of-the-art Rust implementation `rsasl` instead of binding the  `gsasl` C library. (#536)
+* update the vsl api with more consistent syntax. (#545)
+* Greylist sender domain & return code. (#566, #571)
+
+### Fixed
+
+* IPv6 address for `EHLO` command. (#530)
+* Log level ordering. (#565)
+
+### Documented
+
+* improve the vsl api documentation. (#545, #553)
 
 ## [1.2.1] - 2022-08-26
 

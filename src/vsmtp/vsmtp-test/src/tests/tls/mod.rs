@@ -22,17 +22,10 @@ mod tunneled_with_auth;
 const TEST_SERVER_CERT: &str = "src/template/certs/certificate.crt";
 const TEST_SERVER_KEY: &str = "src/template/certs/private_key.rsa.key";
 
-use vsmtp_common::{
-    re::{anyhow, tokio},
-    ConnectionKind,
-};
-use vsmtp_config::{
-    get_rustls_config,
-    re::{rustls, rustls_pemfile},
-    Config,
-};
+use tokio_rustls::rustls;
+use vsmtp_common::ConnectionKind;
+use vsmtp_config::{get_rustls_config, Config};
 use vsmtp_rule_engine::RuleEngine;
-use vsmtp_server::auth;
 use vsmtp_server::Connection;
 use vsmtp_server::{ProcessMessage, Server};
 
@@ -45,14 +38,14 @@ pub fn get_tls_config() -> Config {
         .unwrap()
         .with_ipv4_localhost()
         .with_default_logs_settings()
-        .with_spool_dir_and_default_queues("./tmp/delivery")
+        .with_spool_dir_and_default_queues("./tmp/spool")
         .with_safe_tls_config(TEST_SERVER_CERT, TEST_SERVER_KEY)
         .unwrap()
         .with_default_smtp_options()
         .with_default_smtp_error_handler()
         .with_default_smtp_codes()
         .without_auth()
-        .with_default_app()
+        .with_app_at_location("./tmp/app")
         .with_vsl("./src/tests/empty_main.vsl")
         .with_default_app_logs()
         .with_system_dns()
@@ -101,11 +94,16 @@ async fn test_starttls(
             } else {
                 None
             },
-            None,
             std::sync::Arc::new(
-                RuleEngine::new(&server_config, &server_config.app.vsl.filepath.clone()).unwrap(),
+                RuleEngine::new(
+                    server_config.clone(),
+                    server_config.app.vsl.filepath.clone(),
+                )
+                .unwrap(),
             ),
             std::sync::Arc::new(std::collections::HashMap::new()),
+            <vqueue::fs::QueueManager as vqueue::GenericQueueManager>::init(server_config.clone())
+                .unwrap(),
             working_sender,
             delivery_sender,
         )
@@ -204,16 +202,46 @@ async fn test_starttls(
     Ok((client.unwrap(), server.unwrap()))
 }
 
-// using sockets on 2 thread to make the handshake concurrently
-#[allow(clippy::too_many_arguments)]
-async fn test_tls_tunneled(
+async fn test_tls_tunneled_with_auth(
     server_name: &'static str,
     server_config: std::sync::Arc<Config>,
     smtp_input: Vec<String>,
     expected_output: Vec<String>,
     port: u32,
     get_tls_config: fn(&Config) -> Option<std::sync::Arc<rustls::ServerConfig>>,
-    get_auth_config: fn(&Config) -> Option<std::sync::Arc<tokio::sync::Mutex<auth::Backend>>>,
+    after_handshake: impl Fn(&tokio_rustls::client::TlsStream<tokio::net::TcpStream>) + 'static + Send,
+) -> anyhow::Result<(anyhow::Result<()>, anyhow::Result<()>)> {
+    let rule_engine = std::sync::Arc::new(
+        RuleEngine::new(
+            server_config.clone(),
+            server_config.app.vsl.filepath.clone(),
+        )
+        .unwrap(),
+    );
+
+    test_tls_tunneled(
+        rule_engine,
+        server_name,
+        server_config,
+        smtp_input,
+        expected_output,
+        port,
+        get_tls_config,
+        after_handshake,
+    )
+    .await
+}
+
+// using sockets on 2 thread to make the handshake concurrently
+#[allow(clippy::too_many_arguments)]
+async fn test_tls_tunneled(
+    rule_engine: std::sync::Arc<RuleEngine>,
+    server_name: &'static str,
+    server_config: std::sync::Arc<Config>,
+    smtp_input: Vec<String>,
+    expected_output: Vec<String>,
+    port: u32,
+    get_tls_config: fn(&Config) -> Option<std::sync::Arc<rustls::ServerConfig>>,
     after_handshake: impl Fn(&tokio_rustls::client::TlsStream<tokio::net::TcpStream>) + 'static + Send,
 ) -> anyhow::Result<(anyhow::Result<()>, anyhow::Result<()>)> {
     let socket_server = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
@@ -235,11 +263,10 @@ async fn test_tls_tunneled(
                 client_stream,
             ),
             get_tls_config(&server_config),
-            get_auth_config(&server_config),
-            std::sync::Arc::new(
-                RuleEngine::new(&server_config, &server_config.app.vsl.filepath.clone()).unwrap(),
-            ),
+            rule_engine.clone(),
             std::sync::Arc::new(std::collections::HashMap::new()),
+            <vqueue::fs::QueueManager as vqueue::GenericQueueManager>::init(server_config.clone())
+                .unwrap(),
             working_sender,
             delivery_sender,
         )

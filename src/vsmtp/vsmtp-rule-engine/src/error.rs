@@ -14,7 +14,7 @@
  * this program. If not, see https://www.gnu.org/licenses/.
  *
 */
-use vsmtp_common::{re::anyhow, state::StateSMTP};
+use vsmtp_common::state::State;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
@@ -109,7 +109,7 @@ pub enum RuntimeError {
     #[error(
         "the field: `{field}` is not defined yet, it only is available from the `{stage}` stage"
     )]
-    MissingField { field: String, stage: StateSMTP },
+    MissingField { field: String, stage: State },
     #[error("failed to parse the message body, `{source}`")]
     ParseMessageBody { source: anyhow::Error },
     #[error("invalid type conversion expected: `{r#type}`, but got: `{source}`")]
@@ -125,7 +125,7 @@ macro_rules! vsl_guard_ok {
     ($guard:expr) => {
         $guard.map_err::<Box<rhai::EvalAltResult>, _>(|e| {
             $crate::error::RuntimeError::PoisonedGuard {
-                source: vsmtp_common::re::anyhow::anyhow!("{e}"),
+                source: anyhow::anyhow!("{e}"),
             }
             .into()
         })?

@@ -100,58 +100,10 @@ impl MessageBody {
         self.parsed.is_some()
     }
 
-    /// # Errors
-    ///
-    /// * failed to create the folder in `queues_dirpath`
-    pub fn write_to_mails(
-        &self,
-        queues_dirpath: impl Into<std::path::PathBuf>,
-        message_id: &str,
-    ) -> std::io::Result<()> {
-        let mails = queues_dirpath.into().join("mails");
-        if !mails.exists() {
-            std::fs::DirBuilder::new().recursive(true).create(&mails)?;
-        }
-        {
-            let mails_eml = mails.join(format!("{message_id}.eml"));
-            let mut file = std::fs::OpenOptions::new()
-                .create(true)
-                .write(true)
-                .truncate(true)
-                .open(&mails_eml)?;
-            std::io::Write::write_all(&mut file, self.raw.to_string().as_bytes())?;
-        }
-        if let Some(parsed) = &self.parsed {
-            let mails_json = mails.join(format!("{message_id}.json"));
-            let mut file = std::fs::OpenOptions::new()
-                .create(true)
-                .write(true)
-                .truncate(true)
-                .open(&mails_json)?;
-            std::io::Write::write_all(&mut file, serde_json::to_string(parsed)?.as_bytes())?;
-        }
-
-        Ok(())
-    }
-
-    /// # Errors
-    pub async fn read_mail_message(
-        dirpath: &std::path::Path,
-        id: &str,
-    ) -> anyhow::Result<MessageBody> {
-        use anyhow::Context;
-
-        let message_filepath = std::path::PathBuf::from_iter([
-            dirpath.to_path_buf(),
-            "mails".into(),
-            format!("{id}.eml").into(),
-        ]);
-
-        let content = tokio::fs::read_to_string(&message_filepath)
-            .await
-            .with_context(|| format!("Cannot read file '{}'", message_filepath.display()))?;
-
-        Self::try_from(content.as_str())
+    /// Get the parsed part
+    #[must_use]
+    pub const fn get_parsed(&self) -> &Option<Mail> {
+        &self.parsed
     }
 
     /// get the value of an header, return None if it does not exists or when the body is empty.
@@ -163,6 +115,14 @@ impl MessageBody {
         )
     }
 
+    /// Count the number of headers with the given name.
+    #[must_use]
+    pub fn count_header(&self, name: &str) -> usize {
+        self.parsed
+            .as_ref()
+            .map_or_else(|| self.raw.count_header(name), |p| p.count_header(name))
+    }
+
     /// rewrite a header with a new value or add it to the header section.
     pub fn set_header(&mut self, name: &str, value: &str) {
         if let Some(parsed) = &mut self.parsed {
@@ -170,6 +130,15 @@ impl MessageBody {
         }
 
         self.raw.set_header(name, value);
+    }
+
+    /// Rename a header.
+    pub fn rename_header(&mut self, old: &str, new: &str) {
+        if let Some(parsed) = &mut self.parsed {
+            parsed.rename_header(old, new);
+        }
+
+        self.raw.rename_header(old, new);
     }
 
     /// push a header to the header section.
@@ -192,6 +161,16 @@ impl MessageBody {
         }
 
         self.raw.prepend_header([format!("{name}: {value}")]);
+    }
+
+    /// Remove a header from the list.
+    pub fn remove_header(&mut self, name: &str) -> bool {
+        if let Some(parsed) = &mut self.parsed {
+            // NOTE: the result for a parsed email is ignored.
+            parsed.remove_header(name);
+        }
+
+        self.raw.remove_header(name)
     }
 
     /// # Errors

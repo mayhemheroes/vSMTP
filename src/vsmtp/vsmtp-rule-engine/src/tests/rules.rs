@@ -15,25 +15,25 @@
  *
 */
 use crate::{rule_engine::RuleEngine, tests::helpers::get_default_state};
-use vsmtp_common::{addr, rcpt::Rcpt, state::StateSMTP, status::Status, CodeID, ReplyOrCodeID};
+use vsmtp_common::{addr, rcpt::Rcpt, state::State, status::Status, CodeID, ReplyOrCodeID};
 use vsmtp_mail_parser::{MailMimeParser, MessageBody};
 
 #[test]
 fn test_connect_rules() {
     let re = RuleEngine::new(
-        &vsmtp_config::Config::default(),
-        &Some(rules_path!["rules/connect.vsl"]),
+        std::sync::Arc::new(vsmtp_config::Config::default()),
+        Some(rules_path!["rules/connect.vsl"]),
     )
     .unwrap();
     let (mut state, _) = get_default_state("./tmp/app");
 
     // ctx.client_addr is 0.0.0.0 by default.
     state.context().write().unwrap().connection.client_addr = "127.0.0.1:0".parse().unwrap();
-    assert_eq!(re.run_when(&mut state, &StateSMTP::Connect), Status::Next);
+    assert_eq!(re.run_when(&mut state, State::Connect), Status::Next);
 
     state.context().write().unwrap().connection.client_addr = "0.0.0.0:0".parse().unwrap();
     assert_eq!(
-        re.run_when(&mut state, &StateSMTP::Connect),
+        re.run_when(&mut state, State::Connect),
         Status::Deny(ReplyOrCodeID::Left(CodeID::Denied))
     );
 }
@@ -41,22 +41,22 @@ fn test_connect_rules() {
 #[test]
 fn test_helo_rules() {
     let re = RuleEngine::new(
-        &vsmtp_config::Config::default(),
-        &Some(rules_path!["rules/helo.vsl"]),
+        std::sync::Arc::new(vsmtp_config::Config::default()),
+        Some(rules_path!["rules/helo.vsl"]),
     )
     .unwrap();
     let (mut state, _) = get_default_state("./tmp/app");
     state.context().write().unwrap().envelop.helo = "example.com".to_string();
 
-    assert_eq!(re.run_when(&mut state, &StateSMTP::Connect), Status::Next);
-    assert_eq!(re.run_when(&mut state, &StateSMTP::Helo), Status::Next);
+    assert_eq!(re.run_when(&mut state, State::Connect), Status::Next);
+    assert_eq!(re.run_when(&mut state, State::Helo), Status::Next);
 }
 
 #[test]
 fn test_mail_from_rules() {
     let re = RuleEngine::new(
-        &vsmtp_config::Config::default(),
-        &Some(rules_path!["rules/mail.vsl"]),
+        std::sync::Arc::new(vsmtp_config::Config::default()),
+        Some(rules_path!["rules/mail.vsl"]),
     )
     .unwrap();
 
@@ -81,11 +81,11 @@ fn test_mail_from_rules() {
     }
 
     assert_eq!(
-        re.run_when(&mut state, &StateSMTP::MailFrom),
+        re.run_when(&mut state, State::MailFrom),
         Status::Accept(ReplyOrCodeID::Left(CodeID::Ok)),
     );
     assert_eq!(
-        re.run_when(&mut state, &StateSMTP::PostQ),
+        re.run_when(&mut state, State::PostQ),
         Status::Accept(ReplyOrCodeID::Left(CodeID::Ok)),
     );
     assert_eq!(
@@ -97,8 +97,8 @@ fn test_mail_from_rules() {
 #[test]
 fn test_rcpt_rules() {
     let re = RuleEngine::new(
-        &vsmtp_config::Config::default(),
-        &Some(rules_path!["rules/rcpt.vsl"]),
+        std::sync::Arc::new(vsmtp_config::Config::default()),
+        Some(rules_path!["rules/rcpt.vsl"]),
     )
     .unwrap();
 
@@ -128,10 +128,10 @@ fn test_rcpt_rules() {
     }
 
     assert_eq!(
-        re.run_when(&mut state, &StateSMTP::RcptTo),
+        re.run_when(&mut state, State::RcptTo),
         Status::Accept(ReplyOrCodeID::Left(CodeID::Ok)),
     );
-    assert_eq!(re.run_when(&mut state, &StateSMTP::PostQ), Status::Next);
+    assert_eq!(re.run_when(&mut state, State::PostQ), Status::Next);
     assert_eq!(
         state
             .context()

@@ -15,9 +15,9 @@
  *
 */
 use crate::tests::tls::{get_tls_config, test_tls_tunneled};
-use vsmtp_common::re::tokio;
+use tokio_rustls::rustls;
 use vsmtp_config::get_rustls_config;
-use vsmtp_config::re::rustls;
+use vsmtp_rule_engine::RuleEngine;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_all_cipher_suite() {
@@ -38,9 +38,14 @@ async fn test_all_cipher_suite() {
         config.server.tls.as_mut().unwrap().protocol_version = vec![i.version().version];
         config.server.tls.as_mut().unwrap().cipher_suite = vec![i.suite()];
 
+        let config = std::sync::Arc::new(config);
+
         let (client, server) = test_tls_tunneled(
+            std::sync::Arc::new(
+                RuleEngine::new(config.clone(), config.app.vsl.filepath.clone()).unwrap(),
+            ),
             "testserver.com",
-            std::sync::Arc::new(config),
+            config,
             vec!["QUIT\r\n".to_string()],
             [
                 "220 testserver.com Service ready",
@@ -59,7 +64,6 @@ async fn test_all_cipher_suite() {
                     .unwrap(),
                 ))
             },
-            |_| None,
             |io: &tokio_rustls::client::TlsStream<tokio::net::TcpStream>| {
                 assert_eq!(
                     i.suite(),

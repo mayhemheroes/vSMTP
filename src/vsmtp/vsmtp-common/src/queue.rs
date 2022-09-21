@@ -53,13 +53,13 @@ macro_rules! queue_path {
         {
             let buf = std::path::PathBuf::from($queues_dirpath).join(format!("{}", $queue));
             if !buf.exists() {
-                $crate::re::anyhow::Context::with_context(
+                anyhow::Context::with_context(
                     std::fs::create_dir_all(&buf),
                     || format!("Cannot create queue folder: `{}`", buf.display())
                 )
                 .map(|_| buf)
             } else {
-                $crate::re::anyhow::Ok(buf)
+                anyhow::Ok(buf)
             }
         }
     };
@@ -119,8 +119,6 @@ impl Queue {
             .open(&to_deliver)?;
 
         std::io::Write::write_all(&mut file, serde_json::to_string(ctx)?.as_bytes())?;
-
-        log::debug!("successfully written to {self} queue");
 
         Ok(())
     }
