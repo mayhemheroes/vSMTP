@@ -1,0 +1,6 @@
+project: vSMTP
+target: receiver
+
+cmds:
+  - cmd: /mayhem/receiver
+    libfuzzer: true

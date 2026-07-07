@@ -1,0 +1,6 @@
+project: vSMTP
+target: rules
+
+cmds:
+  - cmd: /mayhem/rules
+    libfuzzer: true
